@@ -45,6 +45,7 @@ func (self *Schema) GetAlias(alias string) (space string) {
 
 func (self *Schema) EncodeElement(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, path ...string) error {
 	for _, elem := range self.Elements {
+		fmt.Println("EncodeElement:", elem.Name)
 		if elem.Name == name {
 			return elem.Encode(enc, sr, self, params, path...)
 		}

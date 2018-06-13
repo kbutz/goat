@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"os"
 )
 
@@ -35,6 +36,7 @@ func (self *Webservice) NewRequest(service, method string, params map[string]int
 }
 
 func (self *Webservice) SendBuffer(service string, res interface{}, buf io.Reader) (err error) {
+	fmt.Println("HELLO")
 	s := self.services[service]
 	if s == nil {
 		err = fmt.Errorf("no such service '%s'", service)
@@ -42,7 +44,19 @@ func (self *Webservice) SendBuffer(service string, res interface{}, buf io.Reade
 	}
 
 	var resp *http.Response
-	resp, err = self.Client.Post(s.Service.Port.Address.Location, "application/soap+xml", buf)
+	req, err := http.NewRequest("POST", s.Service.Port.Address.Location, buf)
+	if err != nil {
+		return
+	}
+	for key, val := range self.header {
+		req.Header.Set(key, val.(string))
+	}
+	req.Header.Set("Content-Type", "application/soap+xml")
+
+	bts, _ := httputil.DumpRequest(req, true)
+	fmt.Println("REQUEST:", string(bts))
+
+	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
 		return
 	}
@@ -75,6 +89,8 @@ func (self *Webservice) Do(service, method string, res interface{}, params map[s
 	if err != nil {
 		return
 	}
+
+	fmt.Println("BYTES", []rune(string(buf.Bytes())))
 
 	err = self.SendBuffer(service, res, buf)
 	return
