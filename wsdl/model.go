@@ -1,10 +1,15 @@
 package wsdl
 
 import (
-	"encoding/xml"
+	"github.com/sezzle/sezzle-go-xml"
 
-	"github.com/justwatchcom/goat/xsd"
+	"sezzle/goat/xsd"
 )
+
+type Import struct {
+	Location  string `xml:"location,attr"`
+	Namespace string `xml:"namespace,attr"`
+}
 
 type Type struct {
 	Schemata []xsd.Schema `xml:"schema"`

@@ -1,13 +1,14 @@
 package xsd
 
 import (
-	"encoding/xml"
 	"strings"
+
+	"github.com/sezzle/sezzle-go-xml"
 )
 
 type Schemaer interface {
-	EncodeElement(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, path ...string) (err error)
-	EncodeType(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, path ...string) (err error)
+	EncodeElement(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) (err error)
+	EncodeType(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) (err error)
 }
 
 type GetAliaser interface {

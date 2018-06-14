@@ -1,36 +1,50 @@
 package wsdl
 
 import (
-	"encoding/xml"
 	"fmt"
 	"io"
-	"os"
+	"log"
+	"net/http"
 	"strings"
 
-	"github.com/justwatchcom/goat/xsd"
+	"github.com/sezzle/sezzle-go-xml"
+
+	"sezzle/goat/xsd"
 )
 
 type InnerDefinitions struct {
-	TargetNamespace string    `xml:"targetNamespace,attr"`
-	Types           Type      `xml:"types"`
-	Messages        []Message `xml:"message"`
-	PortType        PortType  `xml:"portType"`
-	Binding         []Binding `xml:"binding"`
-	Service         Service   `xml:"service"`
+	TargetNamespace string `xml:"targetNamespace,attr"`
+
+	Imports  []Import  `xml:"import"`
+	Types    Type      `xml:"types"`
+	Messages []Message `xml:"message"`
+	PortType PortType  `xml:"portType"`
+	Binding  []Binding `xml:"binding"`
+	Service  Service   `xml:"service"`
 }
 
 type Definitions struct {
-	XMLName xml.Name `xml:"definitions"`
-	Aliases map[string]string
+	XMLName           xml.Name               `xml:"definitions"`
+	Aliases           map[string]string      `xml:"-"` // mapping of [alias]namespace
+	ImportDefinitions map[string]Definitions `xml:"-"` // mapping of [alias]definitions
 	InnerDefinitions
 }
 
-func (self *Definitions) GetAlias(alias string) (space string) {
+func (self *Definitions) GetNamespace(alias string) (space string) {
 	return self.Aliases[alias]
 }
 
-func (self *Definitions) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) {
-	err = d.DecodeElement(&self.InnerDefinitions, &start)
+func (self *Definitions) GetAlias(namespace string) (alias string) {
+	for key, val := range self.Aliases {
+		if val == namespace {
+			return key
+		}
+	}
+	return ""
+}
+
+func (self *Definitions) UnmarshalXML(decoder *xml.Decoder, start xml.StartElement) (err error) {
+	err = decoder.DecodeElement(&self.InnerDefinitions, &start)
 	if err != nil {
 		return
 	}
@@ -76,21 +90,28 @@ func (self *Definitions) WriteRequest(operation string, w io.Writer, headerParam
 	if err != nil {
 		return
 	}
+	// fmt.Println("bndOp", bndOp)
+	// fmt.Println("ptOp", ptOp)
 
-	var header, body xsd.Schema
-	var headerElement, bodyElement string
-	header, headerElement, err = self.getSchema(bndOp.Input.SoapHeader.PortTypeOperationMessage)
-	if err != nil {
-		return
-	}
+	var body xsd.Schema
+	var bodyElement string
+	var bodyService *Definitions
+	// TODO: implement proper handling, tho I can't really find a SoapHeader part for the binding operation
+	/*
+		header, headerElement, err = self.getSchema(bndOp.Input.SoapHeader.PortTypeOperationMessage)
+		if err != nil {
+			return
+		}
+	*/
 
-	body, bodyElement, err = self.getSchema(bndOp.Input.SoapBody.PortTypeOperationMessage, ptOp.Input)
+	body, bodyElement, bodyService, err = self.getSchema(bndOp.Input.SoapBody.PortTypeOperationMessage, ptOp.Input)
 	if err != nil {
 		return
 	}
 
 	fmt.Fprint(w, xml.Header)
-	enc := xml.NewEncoder(io.MultiWriter(w, os.Stdout))
+	enc := xml.NewEncoder(w)
+	//enc := xml.NewEncoder(io.MultiWriter(w, os.Stdout))
 	enc.Indent("", "  ")
 	defer func() {
 		if err == nil {
@@ -98,37 +119,57 @@ func (self *Definitions) WriteRequest(operation string, w io.Writer, headerParam
 		}
 	}()
 
+	envName := "soap-env"
 	envelope := xml.StartElement{
 		Name: xml.Name{
-			Space: "http://schemas.xmlsoap.org/soap/envelope/",
-			Local: "Envelope",
+			Space:  "http://schemas.xmlsoap.org/soap/envelope/",
+			Prefix: envName,
+			Local:  "Envelope",
 		},
 	}
+
+	/*type test struct {
+		Name   xml.Name
+		Prefix string `xml:"xmlns:soapenv,attr"`
+	}
+
+	envelope := test{
+		Name: xml.Name{
+			Space: "ada",
+			Local: envName + ":" + "Envelope",
+		},
+		Prefix: "http://schemas.xmlsoap.org/soap/envelope/",
+	}
+
+	op, _ := xml.MarshalIndent(envelope, "  ", "    ")
+	fmt.Println(string(op))*/
+
 	enc.EncodeToken(envelope)
 	defer enc.EncodeToken(envelope.End())
 
-	soapHeader := xml.StartElement{
-		Name: xml.Name{
-			Space: "http://schemas.xmlsoap.org/soap/envelope/",
-			Local: "Header",
-		},
-	}
-	enc.EncodeToken(soapHeader)
+	// soapHeader := xml.StartElement{
+	// 	Name: xml.Name{
+	// 		Space: "http://schemas.xmlsoap.org/soap/envelope/",
+	// 		Local: "Header",
+	// 	},
+	// }
+	//enc.EncodeToken(soapHeader)
 
-	err = header.EncodeElement(headerElement, enc, self.Types.Schemas, headerParams)
-	if err != nil {
-		return
-	}
-	enc.EncodeToken(soapHeader.End())
+	// err = header.EncodeElement(headerElement, enc, self.Types.Schemas, headerParams)
+	// if err != nil {
+	// 	return
+	// }
+	//enc.EncodeToken(soapHeader.End())
 
 	soapBody := xml.StartElement{
 		Name: xml.Name{
-			Space: "http://schemas.xmlsoap.org/soap/envelope/",
-			Local: "Body",
+			Prefix: envName,
+			Local:  "Body",
 		},
 	}
 	enc.EncodeToken(soapBody)
-	err = body.EncodeElement(bodyElement, enc, self.Types.Schemas, bodyParams)
+
+	err = body.EncodeElement(bodyElement, enc, bodyService.Types.Schemas, bodyParams, true, false)
 	if err != nil {
 		return
 	}
@@ -137,19 +178,29 @@ func (self *Definitions) WriteRequest(operation string, w io.Writer, headerParam
 	return
 }
 
-func (self *Definitions) getSchema(msg ...PortTypeOperationMessage) (schema xsd.Schema, element string, err error) {
+func (self *Definitions) getSchema(msg ...PortTypeOperationMessage) (schema xsd.Schema, element string, service *Definitions, err error) {
 	for _, s := range msg {
+		service = self
 		if s.Message == "" {
 			continue
 		}
 
 		parts := strings.Split(s.Message, ":")
 		if len(parts) == 2 {
+			if service.GetNamespace(parts[0]) != service.TargetNamespace {
+				if _, ok := service.ImportDefinitions[parts[0]]; !ok {
+					err = fmt.Errorf("cannot find '%s' namespace", parts[0])
+					return
+				}
+				temp := service.ImportDefinitions[parts[0]]
+				service = &temp
+			}
+
 			element = parts[1]
 			var ok bool
-			schema, ok = self.Types.Schemas[self.GetAlias(parts[0])]
+			schema, ok = service.Types.Schemas[service.GetNamespace(parts[0])]
 			if ok {
-				for _, m := range self.Messages {
+				for _, m := range service.Messages {
 					if m.Name == element {
 						p := strings.Split(m.Part.Element, ":")
 						if len(p) != 2 {
@@ -175,37 +226,41 @@ func (self *Definitions) getSchema(msg ...PortTypeOperationMessage) (schema xsd.
 }
 
 func (self *Definitions) getOperations(operation string) (bndOp BindingOperation, ptOp PortTypeOperation, err error) {
-	parts := strings.Split(self.Service.Port.Binding, ":")
+	service := *self
+	parts := strings.Split(service.Service.Port.Binding, ":")
 	switch len(parts) {
 	case 2:
-		if self.GetAlias(parts[0]) != self.TargetNamespace {
-			err = fmt.Errorf("have '%s', want '%s' as target namespace", parts[0], self.TargetNamespace)
+		if service.GetNamespace(parts[0]) != service.TargetNamespace {
+			err = fmt.Errorf("have '%s', want '%s' as target namespace", parts[0], service.TargetNamespace)
 			return
 		}
 
 		parts[0] = parts[1]
 		fallthrough
 	case 1:
-		for _, bnd := range self.Binding {
+		for _, bnd := range service.Binding {
 			if bnd.Name == parts[0] {
 				parts = strings.Split(bnd.Type, ":")
+
 				switch len(parts) {
 				case 2:
-					if self.GetAlias(parts[0]) != self.TargetNamespace {
-						err = fmt.Errorf("have '%s', want '%s' as target namespace in binding '%s'", parts[0], self.TargetNamespace, bnd.Name)
-						return
+					if service.GetNamespace(parts[0]) != service.TargetNamespace {
+						if _, ok := service.ImportDefinitions[parts[0]]; !ok {
+							err = fmt.Errorf("cannot find '%s' namespace in binding %s", parts[0], bnd.Name)
+							return
+						}
+						service = service.ImportDefinitions[parts[0]]
 					}
-
 					parts[0] = parts[1]
 					fallthrough
 				case 1:
-					if self.PortType.Name != parts[0] {
-						err = fmt.Errorf("have '%s', want '%s' as target namespace in binding '%s'", parts[0], self.PortType.Name, bnd.Name)
+					if service.PortType.Name != parts[0] {
+						err = fmt.Errorf("have '%s', want '%s' as target namespace in binding '%s'", parts[0], service.PortType.Name, bnd.Name)
 						return
 					}
 
 					var found bool
-					for _, ptOp = range self.PortType.Operations {
+					for _, ptOp = range service.PortType.Operations {
 						found = ptOp.Name == operation
 						if found {
 							break
@@ -235,6 +290,91 @@ func (self *Definitions) getOperations(operation string) (bndOp BindingOperation
 		err = fmt.Errorf("did not find binding '%s'", parts[0])
 	default:
 		err = fmt.Errorf("malformed binding information: '%s'", self.Service.Port.Binding)
+	}
+
+	return
+}
+
+func (self *Definitions) GetDefinitions(url string, headers map[string]interface{}) (err error) {
+	var resp *http.Response
+	var req *http.Request
+	req, err = http.NewRequest("GET", url, nil)
+	if err != nil {
+		return
+	}
+
+	for key, val := range headers {
+		req.Header.Set(key, val.(string))
+	}
+
+	// bts, _ := httputil.DumpRequest(req, true)
+	// fmt.Println(string(bts))
+
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+
+	// bts, _ = httputil.DumpResponse(resp, true)
+	// fmt.Println(string(bts))
+
+	err = xml.NewDecoder(resp.Body).Decode(self)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func (self *Definitions) GetService(url string, headers map[string]interface{}) (err error) {
+	err = self.GetDefinitions(url, headers)
+	if err != nil {
+		return
+	}
+
+	if self.Service.Name == "" {
+		err = fmt.Errorf("invalid service name '%s' for url '%s'", self.Service.Name, url)
+		return
+	}
+	log.Printf("adding service '%s' from '%s'", self.Service.Name, url)
+
+	log.Printf("adding all imports")
+	err = self.AddImports(headers)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func (self *Definitions) AddImports(headers map[string]interface{}) (err error) {
+	imports := []Import{}
+	for _, val := range self.Imports {
+		imports = append(imports, val)
+	}
+
+	for i := range imports {
+		if _, ok := self.ImportDefinitions[self.GetAlias(imports[i].Namespace)]; ok {
+			log.Printf("skipping import from '%s', already added", imports[i].Location)
+			continue
+		}
+
+		log.Printf("adding import from '%s'", imports[i].Location)
+		definitions := &Definitions{
+			Aliases:           make(map[string]string),
+			ImportDefinitions: make(map[string]Definitions),
+		}
+		err = definitions.GetDefinitions(imports[i].Location, headers)
+		if err != nil {
+			return
+		}
+
+		err = definitions.AddImports(headers)
+		if err != nil {
+			return
+		}
+
+		self.ImportDefinitions[self.GetAlias(imports[i].Namespace)] = *definitions
 	}
 
 	return

@@ -1,9 +1,10 @@
 package xsd
 
 import (
-	"encoding/xml"
 	"fmt"
 	"strings"
+
+	"github.com/sezzle/sezzle-go-xml"
 )
 
 type ComplexType struct {
@@ -25,9 +26,9 @@ type Extension struct {
 	Sequence []Element `xml:"sequence>element"`
 }
 
-func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, path ...string) (err error) {
+func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) (err error) {
 	for _, e := range self.Sequence {
-		err = e.Encode(enc, sr, ga, params, path...)
+		err = e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 		if err != nil {
 			return
 		}
@@ -43,7 +44,7 @@ func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAli
 				return
 			}
 
-			err = schema.EncodeType(parts[1], enc, sr, params, path...)
+			err = schema.EncodeType(parts[1], enc, sr, params, keepUsingNamespace, keepUsingNamespace, path...)
 			if err != nil {
 				return
 			}
@@ -53,7 +54,7 @@ func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAli
 		}
 
 		for _, e := range self.Content.Extension.Sequence {
-			err = e.Encode(enc, sr, ga, params, path...)
+			err = e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 			if err != nil {
 				return
 			}

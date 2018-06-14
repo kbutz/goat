@@ -1,9 +1,10 @@
 package xsd
 
 import (
-	"encoding/xml"
 	"fmt"
 	"reflect"
+
+	"github.com/sezzle/sezzle-go-xml"
 )
 
 type mapping struct {
@@ -21,7 +22,7 @@ var mappings = []mapping{
 		format:    "%t",
 	},
 	{
-		xsdSchema: []string{"int", "long"},
+		xsdSchema: []string{"int", "long", "integer"},
 		kinds:     []reflect.Kind{reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr},
 		format:    "%d",
 	},
@@ -44,14 +45,14 @@ var mappings = []mapping{
 type baseSchema struct{}
 
 // http://www.w3.org/2001/XMLSchema-datatypes does not have elements.
-func (baseSchema) EncodeElement(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, path ...string) error {
+func (baseSchema) EncodeElement(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
 	return fmt.Errorf("not implemented")
 }
 
-func (baseSchema) EncodeType(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, path ...string) (err error) {
+func (baseSchema) EncodeType(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) (err error) {
 	v, ok := params[MakePath(path)]
 	if !ok {
-		err = fmt.Errorf("did not find data '%s'", MakePath(path))
+		err = fmt.Errorf("did not find data '%s' in path", MakePath(path))
 		return
 	}
 

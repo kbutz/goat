@@ -13,7 +13,7 @@ func (self SchemaMap) GetSchema(space string) (s Schemaer, err error) {
 		s = baseSchema{}
 	default:
 		if ss, ok := self[space]; !ok {
-			err = fmt.Errorf("namespace not found: '%s'", space)
+			err = fmt.Errorf("schema namespace not found: '%s'", space)
 		} else {
 			s = &ss
 		}
@@ -25,7 +25,7 @@ func (self SchemaMap) GetSchema(space string) (s Schemaer, err error) {
 func (self SchemaMap) GetElement(space, name string) *Element {
 	schema, ok := self[space]
 	if !ok {
-		log.Printf("namespace not found: '%s'", space)
+		log.Printf("element namespace not found: '%s'", space)
 		return nil
 	}
 

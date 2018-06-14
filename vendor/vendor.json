@@ -1,0 +1,13 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "VZ/SERB6PeXDyy6BEyZ4qIRuK0M=",
+			"path": "github.com/sezzle/sezzle-go-xml",
+			"revision": "f2c933a16f4af16e00e729c2b71ff6470c30f3f5",
+			"revisionTime": "2018-06-14T16:46:24Z"
+		}
+	],
+	"rootPath": "sezzle/goat"
+}

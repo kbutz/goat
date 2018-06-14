@@ -1,8 +1,9 @@
 package xsd
 
 import (
-	"encoding/xml"
 	"fmt"
+
+	"github.com/sezzle/sezzle-go-xml"
 )
 
 type InnerSchema struct {
@@ -43,26 +44,26 @@ func (self *Schema) GetAlias(alias string) (space string) {
 	return self.Aliases[alias]
 }
 
-func (self *Schema) EncodeElement(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, path ...string) error {
+func (self *Schema) EncodeElement(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
 	for _, elem := range self.Elements {
 		if elem.Name == name {
-			return elem.Encode(enc, sr, self, params, path...)
+			return elem.Encode(enc, sr, self, params, useNamespace, keepUsingNamespace, path...)
 		}
 	}
 
 	return fmt.Errorf("did not find element '%s'", name)
 }
 
-func (self *Schema) EncodeType(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, path ...string) error {
+func (self *Schema) EncodeType(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
 	for _, cmplx := range self.ComplexTypes {
 		if cmplx.Name == name {
-			return cmplx.Encode(enc, sr, self, params, path...)
+			return cmplx.Encode(enc, sr, self, params, useNamespace, keepUsingNamespace, path...)
 		}
 	}
 
 	for _, smpl := range self.SimpleTypes {
 		if smpl.Name == name {
-			return smpl.Encode(enc, sr, self, params, path...)
+			return smpl.Encode(enc, sr, self, params, useNamespace, keepUsingNamespace, path...)
 		}
 	}
 

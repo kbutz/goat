@@ -2,13 +2,13 @@ package goat
 
 import (
 	"bytes"
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
+
+	"github.com/sezzle/sezzle-go-xml"
 )
 
 type ResponseEnvelope struct {
@@ -42,7 +42,16 @@ func (self *Webservice) SendBuffer(service string, res interface{}, buf io.Reade
 	}
 
 	var resp *http.Response
-	resp, err = self.Client.Post(s.Service.Port.Address.Location, "application/soap+xml", buf)
+	req, err := http.NewRequest("POST", s.Service.Port.Address.Location, buf)
+	if err != nil {
+		return
+	}
+	for key, val := range self.header {
+		req.Header.Set(key, val.(string))
+	}
+	req.Header.Set("Content-Type", "application/soap+xml")
+
+	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
 		return
 	}
@@ -60,7 +69,8 @@ func (self *Webservice) SendBuffer(service string, res interface{}, buf io.Reade
 	}
 
 	e := new(ResponseEnvelope)
-	err = xml.NewDecoder(io.TeeReader(resp.Body, os.Stdout)).Decode(e)
+	err = xml.NewDecoder(resp.Body).Decode(e)
+	//err = xml.NewDecoder(io.TeeReader(resp.Body, os.Stdout)).Decode(e)
 	if err != nil {
 		return
 	}
