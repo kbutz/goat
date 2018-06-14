@@ -1,9 +1,10 @@
 package xsd
 
 import (
-	"encoding/xml"
 	"fmt"
 	"strings"
+
+	"github.com/sezzle/sezzle-go-xml"
 )
 
 type SimpleType struct {
@@ -23,7 +24,7 @@ type Enumeration struct {
 	Value   string   `xml:"value,attr"`
 }
 
-func (self *SimpleType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, path ...string) (err error) {
+func (self *SimpleType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) (err error) {
 	name := self.Restriction.Base
 	parts := strings.Split(name, ":")
 	switch len(parts) {
@@ -34,7 +35,7 @@ func (self *SimpleType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAlia
 			return
 		}
 
-		err = schema.EncodeType(parts[1], enc, sr, params, path...)
+		err = schema.EncodeType(parts[1], enc, sr, params, keepUsingNamespace, keepUsingNamespace, path...)
 	default:
 		err = fmt.Errorf("invalid restriction format '%s'", name)
 	}

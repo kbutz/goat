@@ -1,11 +1,10 @@
 package xsd
 
 import (
-	"encoding/xml"
 	"fmt"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
+	"github.com/sezzle/sezzle-go-xml"
 )
 
 type Element struct {
@@ -19,20 +18,11 @@ type Element struct {
 	ComplexTypes *ComplexType `xml:"http://www.w3.org/2001/XMLSchema complexType"`
 }
 
-type CustomStartElement struct {
-	xml.StartElement
-	Prefix Namespace
-}
+var (
+	envName = "ns0"
+)
 
-type Namespace struct {
-	Prefix string
-	Value  string
-}
-
-func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, path ...string) (err error) {
-	fmt.Println("SELF:", self.Name)
-	spew.Dump(self)
-
+func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) (err error) {
 	if self.MinOccurs != "" && self.MinOccurs == "0" && !hasPrefix(params, MakePath(append(path, self.Name))) {
 		return
 	}
@@ -41,19 +31,17 @@ func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser
 		// TODO: figure this out
 	}*/
 
-	envName := "ns0"
+	var namespace, prefix string
+	if useNamespace {
+		namespace = ga.Namespace()
+		prefix = envName
+	}
+
 	start := xml.StartElement{
 		Name: xml.Name{
-			Local: envName + ":" + "Envelope",
-		},
-		Attr: []xml.Attr{
-			xml.Attr{
-				Name: xml.Name{
-					Space: "xmlns",
-					Local: envName,
-				},
-				Value: ga.Namespace(),
-			},
+			Space:  namespace,
+			Prefix: prefix,
+			Local:  self.Name,
 		},
 		/*Name: xml.Name{
 			//Space: ga.Namespace(),
@@ -85,7 +73,7 @@ func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser
 				return
 			}
 
-			err = schema.EncodeType(parts[1], enc, sr, params, append(path, self.Name)...)
+			err = schema.EncodeType(parts[1], enc, sr, params, keepUsingNamespace, keepUsingNamespace, append(path, self.Name)...)
 			if err != nil {
 				return
 			}
@@ -95,7 +83,7 @@ func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser
 		}
 	} else if self.ComplexTypes != nil {
 		for _, e := range self.ComplexTypes.Sequence {
-			err = e.Encode(enc, sr, ga, params, append(path, self.Name)...)
+			err = e.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, self.Name)...)
 			if err != nil {
 				return
 			}

@@ -2,14 +2,13 @@ package goat
 
 import (
 	"bytes"
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/http/httputil"
-	"os"
+
+	"github.com/sezzle/sezzle-go-xml"
 )
 
 type ResponseEnvelope struct {
@@ -36,7 +35,6 @@ func (self *Webservice) NewRequest(service, method string, params map[string]int
 }
 
 func (self *Webservice) SendBuffer(service string, res interface{}, buf io.Reader) (err error) {
-	fmt.Println("HELLO")
 	s := self.services[service]
 	if s == nil {
 		err = fmt.Errorf("no such service '%s'", service)
@@ -52,9 +50,6 @@ func (self *Webservice) SendBuffer(service string, res interface{}, buf io.Reade
 		req.Header.Set(key, val.(string))
 	}
 	req.Header.Set("Content-Type", "application/soap+xml")
-
-	bts, _ := httputil.DumpRequest(req, true)
-	fmt.Println("REQUEST:", string(bts))
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
@@ -74,7 +69,8 @@ func (self *Webservice) SendBuffer(service string, res interface{}, buf io.Reade
 	}
 
 	e := new(ResponseEnvelope)
-	err = xml.NewDecoder(io.TeeReader(resp.Body, os.Stdout)).Decode(e)
+	err = xml.NewDecoder(resp.Body).Decode(e)
+	//err = xml.NewDecoder(io.TeeReader(resp.Body, os.Stdout)).Decode(e)
 	if err != nil {
 		return
 	}
@@ -89,8 +85,6 @@ func (self *Webservice) Do(service, method string, res interface{}, params map[s
 	if err != nil {
 		return
 	}
-
-	fmt.Println("BYTES", []rune(string(buf.Bytes())))
 
 	err = self.SendBuffer(service, res, buf)
 	return

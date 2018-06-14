@@ -5,12 +5,11 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 
-	"github.com/sezzle/sezzle-go-xml/"
+	"github.com/sezzle/sezzle-go-xml"
 
-	"github.com/sezzle/goat/xsd"
+	"sezzle/goat/xsd"
 )
 
 type InnerDefinitions struct {
@@ -111,7 +110,8 @@ func (self *Definitions) WriteRequest(operation string, w io.Writer, headerParam
 	}
 
 	fmt.Fprint(w, xml.Header)
-	enc := xml.NewEncoder(io.MultiWriter(w, os.Stdout))
+	enc := xml.NewEncoder(w)
+	//enc := xml.NewEncoder(io.MultiWriter(w, os.Stdout))
 	enc.Indent("", "  ")
 	defer func() {
 		if err == nil {
@@ -122,16 +122,9 @@ func (self *Definitions) WriteRequest(operation string, w io.Writer, headerParam
 	envName := "soap-env"
 	envelope := xml.StartElement{
 		Name: xml.Name{
-			Local: envName + ":" + "Envelope",
-		},
-		Attr: []xml.Attr{
-			xml.Attr{
-				Name: xml.Name{
-					Space: "xmlns",
-					Local: envName,
-				},
-				Value: "http://schemas.xmlsoap.org/soap/envelope/",
-			},
+			Space:  "http://schemas.xmlsoap.org/soap/envelope/",
+			Prefix: envName,
+			Local:  "Envelope",
 		},
 	}
 
@@ -170,13 +163,13 @@ func (self *Definitions) WriteRequest(operation string, w io.Writer, headerParam
 
 	soapBody := xml.StartElement{
 		Name: xml.Name{
-			Local: envName + ":" + "Body",
+			Prefix: envName,
+			Local:  "Body",
 		},
 	}
 	enc.EncodeToken(soapBody)
 
-	fmt.Println("bodyElement:", bodyElement)
-	err = body.EncodeElement(bodyElement, enc, bodyService.Types.Schemas, bodyParams)
+	err = body.EncodeElement(bodyElement, enc, bodyService.Types.Schemas, bodyParams, true, false)
 	if err != nil {
 		return
 	}

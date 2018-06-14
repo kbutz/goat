@@ -1,7 +1,7 @@
 package goat
 
 import (
-	"github.com/sezzle/goat/wsdl"
+	"sezzle/goat/wsdl"
 )
 
 type Webservice struct {

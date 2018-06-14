@@ -3,11 +3,11 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "hdD4HoeLRmtt5j1TNOxiXbDFB84=",
+			"checksumSHA1": "VZ/SERB6PeXDyy6BEyZ4qIRuK0M=",
 			"path": "github.com/sezzle/sezzle-go-xml",
-			"revision": "15a2c021dbc305f9689bfb4287a53fb71d6c18ad",
-			"revisionTime": "2018-06-01T20:29:59Z"
+			"revision": "f2c933a16f4af16e00e729c2b71ff6470c30f3f5",
+			"revisionTime": "2018-06-14T16:46:24Z"
 		}
 	],
-	"rootPath": "sezzle/test/vendor/github.com/sezzle/goat"
+	"rootPath": "sezzle/goat"
 }

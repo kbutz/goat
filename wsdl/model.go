@@ -1,9 +1,9 @@
 package wsdl
 
 import (
-	"encoding/xml"
+	"github.com/sezzle/sezzle-go-xml"
 
-	"github.com/sezzle/goat/xsd"
+	"sezzle/goat/xsd"
 )
 
 type Import struct {
