@@ -2,11 +2,8 @@ package goat
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"net/http"
 
 	"github.com/sezzle/sezzle-go-xml"
 )
@@ -30,7 +27,7 @@ func (self *Webservice) NewRequest(service, method string, params map[string]int
 		return
 	}
 
-	err = s.WriteRequest(method, buf, self.header, params)
+	err = s.WriteRequest(method, buf, params)
 	return
 }
 
@@ -41,41 +38,15 @@ func (self *Webservice) SendBuffer(service string, res interface{}, buf io.Reade
 		return
 	}
 
-	var resp *http.Response
-	req, err := http.NewRequest("POST", s.Service.Port.Address.Location, buf)
-	if err != nil {
-		return
-	}
-	for key, val := range self.header {
-		req.Header.Set(key, val.(string))
-	}
-	req.Header.Set("Content-Type", "application/soap+xml")
-
-	resp, err = http.DefaultClient.Do(req)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		var b []byte
-		b, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return
-		}
-
-		err = errors.New(string(b))
-		return
-	}
-
 	e := new(ResponseEnvelope)
-	err = xml.NewDecoder(resp.Body).Decode(e)
-	//err = xml.NewDecoder(io.TeeReader(resp.Body, os.Stdout)).Decode(e)
+	err = self.client.MakeRequest("POST", s.Service.Port.Address.Location, buf, e)
 	if err != nil {
 		return
 	}
-
 	err = xml.Unmarshal(e.Body.Data, res)
+	if err != nil {
+		return
+	}
 	return
 }
 

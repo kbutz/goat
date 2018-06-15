@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"strings"
 
 	"github.com/sezzle/sezzle-go-xml"
 
+	"sezzle/goat/client"
 	"sezzle/goat/xsd"
 )
 
@@ -80,8 +80,8 @@ func copyMap(src map[string]interface{}) map[string]interface{} {
 	return dst
 }
 
-func (self *Definitions) WriteRequest(operation string, w io.Writer, headerParams, bodyParams map[string]interface{}) (err error) {
-	headerParams = copyMap(headerParams)
+func (self *Definitions) WriteRequest(operation string, w io.Writer, bodyParams map[string]interface{}) (err error) {
+	//headerParams = copyMap(headerParams)
 	bodyParams = copyMap(bodyParams)
 
 	var bndOp BindingOperation
@@ -295,39 +295,41 @@ func (self *Definitions) getOperations(operation string) (bndOp BindingOperation
 	return
 }
 
-func (self *Definitions) GetDefinitions(url string, headers map[string]interface{}) (err error) {
-	var resp *http.Response
-	var req *http.Request
-	req, err = http.NewRequest("GET", url, nil)
-	if err != nil {
-		return
-	}
+func (self *Definitions) GetDefinitions(client *client.Client, url string) (err error) {
+	err = client.MakeRequest("GET", url, nil, self)
+	/*
+		var resp *http.Response
+		var req *http.Request
+		req, err = http.NewRequest("GET", url, nil)
+		if err != nil {
+			return
+		}
 
-	for key, val := range headers {
-		req.Header.Set(key, val.(string))
-	}
+		for key, val := range headers {
+			req.Header.Set(key, val.(string))
+		}
 
-	// bts, _ := httputil.DumpRequest(req, true)
-	// fmt.Println(string(bts))
+		// bts, _ := httputil.DumpRequest(req, true)
+		// fmt.Println(string(bts))
 
-	resp, err = http.DefaultClient.Do(req)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
+		resp, err = http.DefaultClient.Do(req)
+		if err != nil {
+			return
+		}
+		defer resp.Body.Close()
 
-	// bts, _ = httputil.DumpResponse(resp, true)
-	// fmt.Println(string(bts))
+		// bts, _ = httputil.DumpResponse(resp, true)
+		// fmt.Println(string(bts))
 
-	err = xml.NewDecoder(resp.Body).Decode(self)
-	if err != nil {
-		return
-	}
+		err = xml.NewDecoder(resp.Body).Decode(self)
+		if err != nil {
+			return
+		}*/
 	return
 }
 
-func (self *Definitions) GetService(url string, headers map[string]interface{}) (err error) {
-	err = self.GetDefinitions(url, headers)
+func (self *Definitions) GetService(client *client.Client, url string) (err error) {
+	err = self.GetDefinitions(client, url)
 	if err != nil {
 		return
 	}
@@ -339,7 +341,7 @@ func (self *Definitions) GetService(url string, headers map[string]interface{}) 
 	log.Printf("adding service '%s' from '%s'", self.Service.Name, url)
 
 	log.Printf("adding all imports")
-	err = self.AddImports(headers)
+	err = self.AddImports(client)
 	if err != nil {
 		return
 	}
@@ -347,7 +349,7 @@ func (self *Definitions) GetService(url string, headers map[string]interface{}) 
 	return
 }
 
-func (self *Definitions) AddImports(headers map[string]interface{}) (err error) {
+func (self *Definitions) AddImports(client *client.Client) (err error) {
 	imports := []Import{}
 	for _, val := range self.Imports {
 		imports = append(imports, val)
@@ -364,12 +366,12 @@ func (self *Definitions) AddImports(headers map[string]interface{}) (err error) 
 			Aliases:           make(map[string]string),
 			ImportDefinitions: make(map[string]Definitions),
 		}
-		err = definitions.GetDefinitions(imports[i].Location, headers)
+		err = definitions.GetDefinitions(client, imports[i].Location)
 		if err != nil {
 			return
 		}
 
-		err = definitions.AddImports(headers)
+		err = definitions.AddImports(client)
 		if err != nil {
 			return
 		}
