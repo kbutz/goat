@@ -1,9 +1,9 @@
 package goat
 
 import (
+	"github.com/kbutz/goat/client"
+	"github.com/kbutz/goat/wsdl"
 	"net/http"
-	"sezzle/goat/client"
-	"sezzle/goat/wsdl"
 )
 
 type Webservice struct {

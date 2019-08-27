@@ -13,6 +13,7 @@ type InnerSchema struct {
 	ComplexTypes       []ComplexType `xml:"http://www.w3.org/2001/XMLSchema complexType"`
 	SimpleTypes        []SimpleType  `xml:"http://www.w3.org/2001/XMLSchema simpleType"`
 	Elements           []Element     `xml:"http://www.w3.org/2001/XMLSchema element"`
+	// TODO: need to hancle Choice schema type
 }
 
 type Schema struct {

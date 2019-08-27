@@ -63,6 +63,12 @@ func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser
 		return
 	}
 
+	//fmt.Println("Name: " + fmt.Sprintf("%+v", self.Name))
+	//fmt.Println("Type: " + fmt.Sprintf("%+v", self.Type))
+	//fmt.Println("ComplexTypes: " + fmt.Sprintf("%+v", self.ComplexTypes))
+	//if self.ComplexTypes != nil {
+	//	fmt.Println("ComplexTypes.Sequence" + fmt.Sprintf("%+v", self.ComplexTypes.Sequence))
+	//}
 	if self.Type != "" {
 		parts := strings.Split(self.Type, ":")
 		switch len(parts) {

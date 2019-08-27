@@ -8,8 +8,8 @@ import (
 
 	"github.com/sezzle/sezzle-go-xml"
 
-	"sezzle/goat/client"
-	"sezzle/goat/xsd"
+	"github.com/kbutz/goat/client"
+	"github.com/kbutz/goat/xsd"
 )
 
 type InnerDefinitions struct {
