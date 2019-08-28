@@ -297,6 +297,7 @@ func (self *Definitions) getOperations(operation string) (bndOp BindingOperation
 	return
 }
 
+// Unmarhsals the WSDL definitions into the Definitions struct
 func (self *Definitions) GetDefinitions(client *client.Client, url string) (err error) {
 	err = client.MakeRequest("GET", url, nil, self)
 	/*
@@ -330,7 +331,9 @@ func (self *Definitions) GetDefinitions(client *client.Client, url string) (err 
 	return
 }
 
+// Gets the base wsdl import, binding and operation definitions, adds imports and schema definitions
 func (self *Definitions) GetService(client *client.Client, url string) (err error) {
+	log.Printf("Get Definitions 1: %s", url)
 	err = self.GetDefinitions(client, url)
 	if err != nil {
 		return
@@ -351,6 +354,7 @@ func (self *Definitions) GetService(client *client.Client, url string) (err erro
 	return
 }
 
+// Gets wsdl schema definitions and recursively adds any additional imports
 func (self *Definitions) AddImports(client *client.Client) (err error) {
 	imports := []Import{}
 	for _, val := range self.Imports {
@@ -368,6 +372,7 @@ func (self *Definitions) AddImports(client *client.Client) (err error) {
 			Aliases:           make(map[string]string),
 			ImportDefinitions: make(map[string]Definitions),
 		}
+		log.Printf("Get Definitions 2: %s", imports[i].Location)
 		err = definitions.GetDefinitions(client, imports[i].Location)
 		if err != nil {
 			return

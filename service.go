@@ -66,6 +66,7 @@ func (self *Webservice) GetHistory() (history *[]client.History) {
 	return &self.client.History
 }
 
+// Adds your WSDL service or services
 func (self *Webservice) AddServices(urls ...string) (err error) {
 	for _, u := range urls {
 		service := &wsdl.Definitions{

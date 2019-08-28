@@ -9,11 +9,14 @@ import (
 )
 
 type ComplexType struct {
-	XMLName  xml.Name        `xml:"http://www.w3.org/2001/XMLSchema complexType"`
-	Name     string          `xml:"name,attr"`
-	Abstract bool            `xml:"abstract,attr"`
-	Sequence Sequence        `xml:"sequence"`
-	Content  *ComplexContent `xml:"http://www.w3.org/2001/XMLSchema complexContent"`
+	XMLName  xml.Name `xml:"http://www.w3.org/2001/XMLSchema complexType"`
+	Name     string   `xml:"name,attr"`
+	Abstract bool     `xml:"abstract,attr"`
+	Sequence Sequence `xml:"sequence"`
+	//Sequence []Element        `xml:"sequence>element"`
+	//Choice []Element 	     `xml:"choice>element"`
+	//SequenceChoice []Element `xml:"sequence>choice>element"`
+	Content *ComplexContent `xml:"http://www.w3.org/2001/XMLSchema complexContent"`
 }
 
 type Sequence struct {

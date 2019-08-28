@@ -24,7 +24,9 @@ var (
 )
 
 func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
-	if self.MinOccurs != "" && self.MinOccurs == "0" && !hasPrefix(params, MakePath(append(path, self.Name))) {
+	// If minOccurs="0" and the current schema element was not submitted on the parameters, we don't need it
+	// If a value for the current schema element was submitted, continue with encoding
+	if self.MinOccurs == "0" && !hasPrefix(params, MakePath(append(path, self.Name))) {
 		return nil
 	}
 
@@ -67,7 +69,7 @@ func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser
 				return err
 			}
 
-			// This isn't helpful - the schema is the FULL wsdl map
+			// This isn't a helpful debug statement - the schema is the FULL wsdl definition map
 			//fmt.Println("self.Type != '', schema: " + fmt.Sprintf("%+v", schema))
 			err = schema.EncodeType(parts[1], enc, sr, params, keepUsingNamespace, keepUsingNamespace, append(path, self.Name)...)
 			if err != nil {
@@ -96,6 +98,7 @@ func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser
 		}
 	}
 
+	// If an error was thrown above while trying to add a choice element that is not required, we won't close the tag here
 	err = enc.EncodeToken(start.End())
 	if err != nil {
 		err = errors.Wrap(err, "Error encoding end token")
