@@ -2,6 +2,7 @@ package xsd
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"strings"
 
 	"github.com/sezzle/sezzle-go-xml"
@@ -11,8 +12,13 @@ type ComplexType struct {
 	XMLName  xml.Name        `xml:"http://www.w3.org/2001/XMLSchema complexType"`
 	Name     string          `xml:"name,attr"`
 	Abstract bool            `xml:"abstract,attr"`
-	Sequence []Element       `xml:"sequence>element"`
+	Sequence Sequence        `xml:"sequence"`
 	Content  *ComplexContent `xml:"http://www.w3.org/2001/XMLSchema complexContent"`
+}
+
+type Sequence struct {
+	Elements []Element `xml:"element"`
+	Choice   []Element `xml:"choice>element"`
 }
 
 type ComplexContent struct {
@@ -26,40 +32,62 @@ type Extension struct {
 	Sequence []Element `xml:"sequence>element"`
 }
 
-func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) (err error) {
-	for _, e := range self.Sequence {
-		err = e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
+func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
+	for _, e := range self.Sequence.Elements {
+		err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 		if err != nil {
-			return
+			err = errors.Wrap(err, "Error encoding Sequence.Element")
+			return err
 		}
 	}
 
+	expectedChoiceErrors := len(self.Sequence.Choice) - 1
+	choiceErrorCount := 0
+	for _, e := range self.Sequence.Choice {
+		fmt.Println("Encoding CHOICE: " + fmt.Sprintf("%+v", e))
+		choiceErr := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
+		if choiceErr != nil {
+			choiceErrorCount++
+			fmt.Println("ERROR COUNT++ ", choiceErr)
+		}
+	}
+
+	// TODO: The last condition needs to go away. I think this library has just been disrespecting the choice element, allowing us to send malformed (but somehow passing) XML...
+	if len(self.Sequence.Choice) > 0 && choiceErrorCount != expectedChoiceErrors && choiceErrorCount != len(self.Sequence.Choice) {
+		err := fmt.Errorf("choice error of %+v was not equal to expect choice error count of %+v or equal to choice count of %+v", choiceErrorCount, expectedChoiceErrors, len(self.Sequence.Choice))
+		return err
+	}
+
+	fmt.Println("self.Content: " + fmt.Sprintf("%+v", self.Content))
 	if self.Content != nil {
 		parts := strings.Split(self.Content.Extension.Base, ":")
 		switch len(parts) {
 		case 2:
 			var schema Schemaer
-			schema, err = sr.GetSchema(ga.GetAlias(parts[0]))
+			schema, err := sr.GetSchema(ga.GetAlias(parts[0]))
 			if err != nil {
-				return
+				err = errors.Wrap(err, "Error getting schema from "+parts[0])
+				return err
 			}
 
 			err = schema.EncodeType(parts[1], enc, sr, params, keepUsingNamespace, keepUsingNamespace, path...)
 			if err != nil {
-				return
+				err = errors.Wrap(err, "Error encoding type for "+parts[1])
+				return err
 			}
 		default:
-			err = fmt.Errorf("malformed base '%s' in path %q", self.Content.Extension.Base, path)
-			return
+			err := fmt.Errorf("malformed base '%s' in path %q", self.Content.Extension.Base, path)
+			return err
 		}
 
 		for _, e := range self.Content.Extension.Sequence {
-			err = e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
+			err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 			if err != nil {
-				return
+				err = errors.Wrap(err, "Error encoding from Content.Extension.Sequence")
+				return err
 			}
 		}
 	}
 
-	return
+	return nil
 }

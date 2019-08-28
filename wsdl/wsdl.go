@@ -169,6 +169,8 @@ func (self *Definitions) WriteRequest(operation string, w io.Writer, bodyParams 
 	}
 	enc.EncodeToken(soapBody)
 
+	//fmt.Println("bodyservice.Types.Schemas: " + fmt.Sprintf("%+v", bodyService.Types.Schemas))
+	fmt.Println("bodyElement: " + fmt.Sprintf("%+v", bodyElement))
 	err = body.EncodeElement(bodyElement, enc, bodyService.Types.Schemas, bodyParams, true, false)
 	if err != nil {
 		return

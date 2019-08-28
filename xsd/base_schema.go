@@ -36,6 +36,12 @@ var mappings = []mapping{
 		kinds:     []reflect.Kind{reflect.String},
 		format:    "%s",
 	},
+	// TODO: need to support dateTime
+	{
+		xsdSchema: []string{"dateTime"},
+		kinds:     []reflect.Kind{reflect.String},
+		format:    "%s",
+	},
 }
 
 // baseSchema is the Schema implementation of http://www.w3.org/2001/XMLSchema
