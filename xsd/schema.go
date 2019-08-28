@@ -47,6 +47,8 @@ func (self *Schema) GetAlias(alias string) (space string) {
 	return self.Aliases[alias]
 }
 
+// EncodeElement : Begins encoding to XML from the top level body element, calling Encode and EncodeType recursively on the
+// nested elements until there are no more to be encoded.
 func (self *Schema) EncodeElement(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
 	// Starts encoding the top level xml element
 	//fmt.Println(fmt.Sprintf("Elements: %+v", self.Elements))
@@ -54,7 +56,12 @@ func (self *Schema) EncodeElement(name string, enc *xml.Encoder, sr SchemaReposi
 		if elem.Name == name {
 			fmt.Println("elem.Name == name: " + fmt.Sprintf("%+v", elem))
 			// elem.Name == "transaction-continue" or "transaction-identity-verification", for example
-			return elem.Encode(enc, sr, self, params, useNamespace, keepUsingNamespace, path...)
+			err := elem.Encode(enc, sr, self, params, useNamespace, keepUsingNamespace, path...)
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
+			return nil
 		}
 	}
 
