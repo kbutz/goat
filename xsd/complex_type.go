@@ -9,19 +9,13 @@ import (
 )
 
 type ComplexType struct {
-	XMLName  xml.Name `xml:"http://www.w3.org/2001/XMLSchema complexType"`
-	Name     string   `xml:"name,attr"`
-	Abstract bool     `xml:"abstract,attr"`
-	//Sequence Sequence `xml:"sequence"`
-	Sequence       []Element       `xml:"sequence>element"`
-	Choice         []Element       `xml:"choice>element"`
-	SequenceChoice []Element       `xml:"sequence>choice>element"`
+	XMLName        xml.Name        `xml:"http://www.w3.org/2001/XMLSchema complexType"`
+	Name           string          `xml:"name,attr"`
+	Abstract       bool            `xml:"abstract,attr"`
+	Sequence       []Element       `xml:"sequence>element"`        // Specifies that all of the elements the child elements must appear in a sequence 0 to any number of times
+	Choice         []Element       `xml:"choice>element"`          // Allows only one or zero of the elements contained int the declaration to be present within the containing element
+	SequenceChoice []Element       `xml:"sequence>choice>element"` // Allows only one or zero of the elements contained int the declaration to be present within the containing element
 	Content        *ComplexContent `xml:"http://www.w3.org/2001/XMLSchema complexContent"`
-}
-
-type Sequence struct {
-	Elements []Element `xml:"element"`
-	Choice   []Element `xml:"choice>element"`
 }
 
 type ComplexContent struct {
