@@ -31,8 +31,8 @@ type Extension struct {
 	Sequence []Element `xml:"sequence>element"`
 }
 
-func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
-	for _, e := range self.Sequence {
+func (c *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
+	for _, e := range c.Sequence {
 		err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 		if err != nil {
 			err = errors.Wrap(err, "Error encoding Sequence.Element")
@@ -45,13 +45,13 @@ func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAli
 	// If more than one, return error
 	// If one, start encoding - if any of the child element types are also choices, they will need to meet the same criteria
 	submittedChoices := 0
-	for _, e := range self.Choice {
+	for _, e := range c.Choice {
 		if hasPrefix(params, MakePath(append(path, e.Name))) {
 			submittedChoices++
 		}
 	}
 
-	fmt.Println(fmt.Sprintf("submittedChoices: %+v for %s", submittedChoices, self.Name))
+	fmt.Println(fmt.Sprintf("submittedChoices: %+v for %s", submittedChoices, c.Name))
 
 	if submittedChoices > 1 {
 		return errors.New("A max of one choice element can be submitted")
@@ -59,7 +59,7 @@ func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAli
 
 	if submittedChoices == 1 {
 		fmt.Println("There was a single choice block submitted on the params, attempt to encode the choice elements")
-		for _, e := range self.Choice {
+		for _, e := range c.Choice {
 			if hasPrefix(params, MakePath(append(path, e.Name))) {
 				fmt.Println("Encoding CHOICE: " + fmt.Sprintf("%+v", e))
 				err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
@@ -72,13 +72,13 @@ func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAli
 	}
 
 	submittedSequenceChoices := 0
-	for _, e := range self.SequenceChoice {
+	for _, e := range c.SequenceChoice {
 		if hasPrefix(params, MakePath(append(path, e.Name))) {
 			submittedSequenceChoices++
 		}
 	}
 
-	fmt.Println(fmt.Sprintf("submittedSequenceChoices: %+v for %s", submittedSequenceChoices, self.Name))
+	fmt.Println(fmt.Sprintf("submittedSequenceChoices: %+v for %s", submittedSequenceChoices, c.Name))
 
 	if submittedSequenceChoices > 1 {
 		return errors.New("A max of one choice element can be submitted")
@@ -86,7 +86,7 @@ func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAli
 
 	if submittedSequenceChoices == 1 {
 		fmt.Println("There was a single choice block submitted on the params, attempt to encode the choice elements")
-		for _, e := range self.SequenceChoice {
+		for _, e := range c.SequenceChoice {
 			if hasPrefix(params, MakePath(append(path, e.Name))) {
 				fmt.Println("Encoding SEQUENCE>CHOICE: " + fmt.Sprintf("%+v", e))
 				err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
@@ -98,9 +98,9 @@ func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAli
 		}
 	}
 
-	fmt.Println("self.Content: " + fmt.Sprintf("%+v", self.Content))
-	if self.Content != nil {
-		parts := strings.Split(self.Content.Extension.Base, ":")
+	fmt.Println("c.Content: " + fmt.Sprintf("%+v", c.Content))
+	if c.Content != nil {
+		parts := strings.Split(c.Content.Extension.Base, ":")
 		switch len(parts) {
 		case 2:
 			var schema Schemaer
@@ -116,11 +116,11 @@ func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAli
 				return err
 			}
 		default:
-			err := fmt.Errorf("malformed base '%s' in path %q", self.Content.Extension.Base, path)
+			err := fmt.Errorf("malformed base '%s' in path %q", c.Content.Extension.Base, path)
 			return err
 		}
 
-		for _, e := range self.Content.Extension.Sequence {
+		for _, e := range c.Content.Extension.Sequence {
 			err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 			if err != nil {
 				err = errors.Wrap(err, "Error encoding from Content.Extension.Sequence")

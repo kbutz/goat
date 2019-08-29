@@ -23,10 +23,10 @@ var (
 	envName = "ns0"
 )
 
-func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
+func (e *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
 	// If minOccurs="0" and the current schema element was not submitted on the parameters, we don't need it
 	// If a value for the current schema element was submitted, continue with encoding
-	if self.MinOccurs == "0" && !hasPrefix(params, MakePath(append(path, self.Name))) {
+	if e.MinOccurs == "0" && !hasPrefix(params, MakePath(append(path, e.Name))) {
 		return nil
 	}
 
@@ -40,7 +40,7 @@ func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser
 		Name: xml.Name{
 			Space:  namespace,
 			Prefix: prefix,
-			Local:  self.Name,
+			Local:  e.Name,
 		},
 	}
 
@@ -67,8 +67,8 @@ func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser
 	//		to force *all* of the elements to be encoded or abort. Here, we want *at least one* element encoded...
 	//		This gets a little tricky with how this implementation handles encoding the XML - we need a way to abort/rollback a
 	//		choice element that could not be encoded...
-	if self.Type != "" {
-		parts := strings.Split(self.Type, ":")
+	if e.Type != "" {
+		parts := strings.Split(e.Type, ":")
 		switch len(parts) {
 		case 2:
 			var schema Schemaer
@@ -80,40 +80,40 @@ func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser
 
 			// This isn't a helpful debug statement - the schema is the FULL wsdl definition map
 			//fmt.Println("self.Type != '', schema: " + fmt.Sprintf("%+v", schema))
-			err = schema.EncodeType(parts[1], enc, sr, params, keepUsingNamespace, keepUsingNamespace, append(path, self.Name)...)
+			err = schema.EncodeType(parts[1], enc, sr, params, keepUsingNamespace, keepUsingNamespace, append(path, e.Name)...)
 			if err != nil {
 				err = errors.Wrap(err, "Error encoding type for "+parts[1])
 				return err
 			}
 		default:
-			err = fmt.Errorf("malformed type '%s' in path %q", self.Type, path)
+			err = fmt.Errorf("malformed type '%s' in path %q", e.Type, path)
 			return err
 		}
-	} else if self.ComplexTypes != nil {
-		for _, e := range self.ComplexTypes.Sequence {
-			err = e.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, self.Name)...)
+	} else if e.ComplexTypes != nil {
+		for _, element := range e.ComplexTypes.Sequence {
+			err = element.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, e.Name)...)
 			if err != nil {
 				err = errors.Wrap(err, "Error encoding ComplexTypes.Sequence.Elements")
 				return err
 			}
 		}
 
-		for _, e := range self.ComplexTypes.Choice {
+		for _, element := range e.ComplexTypes.Choice {
 			// TODO: We don't actually need to do any choice validation here, I think. e.Encode will attempt to encode
 			//		a type once one is reached, which will either encode the simple type with no validation, or the
 			//		complexType with the choice validations
-			err = e.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, self.Name)...)
+			err = element.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, e.Name)...)
 			err = errors.Wrap(err, "Error encoding ComplexTypes.Sequence.Choice")
 			if err != nil {
 				return err
 			}
 		}
 
-		for _, e := range self.ComplexTypes.SequenceChoice {
+		for _, element := range e.ComplexTypes.SequenceChoice {
 			// TODO: We don't actually need to do any choice validation here, I think. e.Encode will attempt to encode
 			//		a type once one is reached, which will either encode the simple type with no validation, or the
 			//		complexType with the choice validations
-			err = e.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, self.Name)...)
+			err = element.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, e.Name)...)
 			err = errors.Wrap(err, "Error encoding ComplexTypes.Sequence.Choice")
 			if err != nil {
 				return err

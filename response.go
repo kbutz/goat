@@ -3,9 +3,8 @@ package goat
 import (
 	"bytes"
 	"fmt"
-	"io"
-
 	"github.com/sezzle/sezzle-go-xml"
+	"io"
 )
 
 type ResponseEnvelope struct {
@@ -20,8 +19,8 @@ type ResponseEnvelope struct {
 	}
 }
 
-func (self *Webservice) NewRequest(service, method string, params map[string]interface{}, buf io.Writer) (err error) {
-	s := self.services[service]
+func (w *Webservice) NewRequest(service, method string, params map[string]interface{}, buf io.Writer) (err error) {
+	s := w.services[service]
 	if s == nil {
 		err = fmt.Errorf("no such service '%s'", service)
 		return
@@ -31,15 +30,15 @@ func (self *Webservice) NewRequest(service, method string, params map[string]int
 	return
 }
 
-func (self *Webservice) SendBuffer(service string, res interface{}, buf io.Reader) (err error) {
-	s := self.services[service]
+func (w *Webservice) SendBuffer(service string, res interface{}, buf io.Reader) (err error) {
+	s := w.services[service]
 	if s == nil {
 		err = fmt.Errorf("no such service '%s'", service)
 		return
 	}
 
 	e := new(ResponseEnvelope)
-	err = self.client.MakeRequest("POST", s.Service.Port.Address.Location, buf, e)
+	err = w.client.MakeRequest("POST", s.Service.Port.Address.Location, buf, e)
 	if err != nil {
 		return
 	}
@@ -50,9 +49,9 @@ func (self *Webservice) SendBuffer(service string, res interface{}, buf io.Reade
 	return
 }
 
-func (self *Webservice) Do(service, method string, res interface{}, params map[string]interface{}) (err error) {
+func (w *Webservice) Do(service, method string, res interface{}, params map[string]interface{}) (err error) {
 	buf := new(bytes.Buffer)
-	err = self.NewRequest(service, method, params, buf)
+	err = w.NewRequest(service, method, params, buf)
 	if err != nil {
 		return
 	}
@@ -68,6 +67,6 @@ func (self *Webservice) Do(service, method string, res interface{}, params map[s
 	//return nil
 
 	// TODO: Webservice.SendBuffer with invalid SOAP request will return a generic SOAP faultCode
-	err = self.SendBuffer(service, res, buf)
+	err = w.SendBuffer(service, res, buf)
 	return err
 }

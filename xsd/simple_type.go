@@ -24,8 +24,8 @@ type Enumeration struct {
 	Value   string   `xml:"value,attr"`
 }
 
-func (self *SimpleType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) (err error) {
-	name := self.Restriction.Base
+func (s *SimpleType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) (err error) {
+	name := s.Restriction.Base
 	parts := strings.Split(name, ":")
 	switch len(parts) {
 	case 2:
