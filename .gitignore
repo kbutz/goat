@@ -23,3 +23,6 @@ _testmain.go
 *.test
 *.prof
 *.DS_Store
+
+# IDE specific files
+.idea
