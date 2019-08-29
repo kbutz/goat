@@ -3,8 +3,9 @@ package goat
 import (
 	"bytes"
 	"fmt"
-	"github.com/sezzle/sezzle-go-xml"
 	"io"
+
+	"github.com/sezzle/sezzle-go-xml"
 )
 
 type ResponseEnvelope struct {
@@ -19,41 +20,41 @@ type ResponseEnvelope struct {
 	}
 }
 
-func (w *Webservice) NewRequest(service, method string, params map[string]interface{}, buf io.Writer) error {
-	s := w.services[service]
+func (self *Webservice) NewRequest(service, method string, params map[string]interface{}, buf io.Writer) (err error) {
+	s := self.services[service]
 	if s == nil {
-		err := fmt.Errorf("no such service '%s'", service)
-		return err
+		err = fmt.Errorf("no such service '%s'", service)
+		return
 	}
 
-	err := s.WriteRequest(method, buf, params)
-	return err
+	err = s.WriteRequest(method, buf, params)
+	return
 }
 
-func (w *Webservice) SendBuffer(service string, res interface{}, buf io.Reader) error {
-	s := w.services[service]
+func (self *Webservice) SendBuffer(service string, res interface{}, buf io.Reader) (err error) {
+	s := self.services[service]
 	if s == nil {
-		err := fmt.Errorf("no such service '%s'", service)
-		return err
+		err = fmt.Errorf("no such service '%s'", service)
+		return
 	}
 
 	e := new(ResponseEnvelope)
-	err := w.client.MakeRequest("POST", s.Service.Port.Address.Location, buf, e)
+	err = self.client.MakeRequest("POST", s.Service.Port.Address.Location, buf, e)
 	if err != nil {
-		return err
+		return
 	}
 	err = xml.Unmarshal(e.Body.Data, res)
 	if err != nil {
-		return err
+		return
 	}
-	return nil
+	return
 }
 
-func (w *Webservice) Do(service, method string, res interface{}, params map[string]interface{}) error {
+func (self *Webservice) Do(service, method string, res interface{}, params map[string]interface{}) (err error) {
 	buf := new(bytes.Buffer)
-	err := w.NewRequest(service, method, params, buf)
+	err = self.NewRequest(service, method, params, buf)
 	if err != nil {
-		return err
+		return
 	}
 
 	//fmt.Println("THE ERROR: ", err)
@@ -67,6 +68,6 @@ func (w *Webservice) Do(service, method string, res interface{}, params map[stri
 	//return nil
 
 	// TODO: Webservice.SendBuffer with invalid SOAP request will return a generic SOAP faultCode
-	err = w.SendBuffer(service, res, buf)
+	err = self.SendBuffer(service, res, buf)
 	return err
 }

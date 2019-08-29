@@ -2,7 +2,6 @@ package wsdl
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"io"
 	"log"
 	"strings"
@@ -31,12 +30,12 @@ type Definitions struct {
 	InnerDefinitions
 }
 
-func (d *Definitions) GetNamespace(alias string) string {
-	return d.Aliases[alias]
+func (self *Definitions) GetNamespace(alias string) (space string) {
+	return self.Aliases[alias]
 }
 
-func (d *Definitions) GetAlias(namespace string) string {
-	for key, val := range d.Aliases {
+func (self *Definitions) GetAlias(namespace string) (alias string) {
+	for key, val := range self.Aliases {
 		if val == namespace {
 			return key
 		}
@@ -44,33 +43,33 @@ func (d *Definitions) GetAlias(namespace string) string {
 	return ""
 }
 
-func (d *Definitions) UnmarshalXML(decoder *xml.Decoder, start xml.StartElement) error {
-	err := decoder.DecodeElement(&d.InnerDefinitions, &start)
+func (self *Definitions) UnmarshalXML(decoder *xml.Decoder, start xml.StartElement) (err error) {
+	err = decoder.DecodeElement(&self.InnerDefinitions, &start)
 	if err != nil {
-		return err
+		return
 	}
 
-	d.XMLName = start.Name
-	d.Aliases = map[string]string{}
+	self.XMLName = start.Name
+	self.Aliases = map[string]string{}
 
-	d.Types.Schemas = xsd.SchemaMap{}
-	for _, schema := range d.Types.Schemata {
-		d.Types.Schemas[schema.TargetNamespace] = schema
+	self.Types.Schemas = xsd.SchemaMap{}
+	for _, schema := range self.Types.Schemata {
+		self.Types.Schemas[schema.TargetNamespace] = schema
 	}
 
 	for _, attr := range start.Attr {
-		if _, ok := d.Aliases[attr.Name.Local]; !ok {
-			d.Aliases[attr.Name.Local] = attr.Value
+		if _, ok := self.Aliases[attr.Name.Local]; !ok {
+			self.Aliases[attr.Name.Local] = attr.Value
 		}
 
-		for k := range d.Types.Schemas {
-			if _, ok := d.Types.Schemas[k].Aliases[attr.Name.Local]; !ok {
-				d.Types.Schemas[k].Aliases[attr.Name.Local] = attr.Value
+		for k := range self.Types.Schemas {
+			if _, ok := self.Types.Schemas[k].Aliases[attr.Name.Local]; !ok {
+				self.Types.Schemas[k].Aliases[attr.Name.Local] = attr.Value
 			}
 		}
 	}
 
-	return nil
+	return
 }
 
 func copyMap(src map[string]interface{}) map[string]interface{} {
@@ -81,15 +80,15 @@ func copyMap(src map[string]interface{}) map[string]interface{} {
 	return dst
 }
 
-func (d *Definitions) WriteRequest(operation string, w io.Writer, bodyParams map[string]interface{}) error {
+func (self *Definitions) WriteRequest(operation string, w io.Writer, bodyParams map[string]interface{}) (err error) {
 	//headerParams = copyMap(headerParams)
 	bodyParams = copyMap(bodyParams)
 
 	var bndOp BindingOperation
 	var ptOp PortTypeOperation
-	bndOp, ptOp, err := d.getOperations(operation)
+	bndOp, ptOp, err = self.getOperations(operation)
 	if err != nil {
-		return err
+		return
 	}
 	// fmt.Println("bndOp", bndOp)
 	// fmt.Println("ptOp", ptOp)
@@ -99,15 +98,15 @@ func (d *Definitions) WriteRequest(operation string, w io.Writer, bodyParams map
 	var bodyService *Definitions
 	// TODO: implement proper handling, tho I can't really find a SoapHeader part for the binding operation
 	/*
-		header, headerElement, err = d.getSchema(bndOp.Input.SoapHeader.PortTypeOperationMessage)
+		header, headerElement, err = self.getSchema(bndOp.Input.SoapHeader.PortTypeOperationMessage)
 		if err != nil {
 			return
 		}
 	*/
 
-	body, bodyElement, bodyService, err = d.getSchema(bndOp.Input.SoapBody.PortTypeOperationMessage, ptOp.Input)
+	body, bodyElement, bodyService, err = self.getSchema(bndOp.Input.SoapBody.PortTypeOperationMessage, ptOp.Input)
 	if err != nil {
-		return err
+		return
 	}
 
 	// TODO: unhadled errors
@@ -158,7 +157,7 @@ func (d *Definitions) WriteRequest(operation string, w io.Writer, bodyParams map
 	// }
 	//enc.EncodeToken(soapHeader)
 
-	// err = header.EncodeElement(headerElement, enc, d.Types.Schemas, headerParams)
+	// err = header.EncodeElement(headerElement, enc, self.Types.Schemas, headerParams)
 	// if err != nil {
 	// 	return
 	// }
@@ -177,17 +176,17 @@ func (d *Definitions) WriteRequest(operation string, w io.Writer, bodyParams map
 	fmt.Println("bodyElement: " + fmt.Sprintf("%+v", bodyElement))
 	err = body.EncodeElement(bodyElement, enc, bodyService.Types.Schemas, bodyParams, true, false)
 	if err != nil {
-		return err
+		return
 	}
 	// TODO: unhadled errors
 	enc.EncodeToken(soapBody.End())
 
-	return nil
+	return
 }
 
-func (d *Definitions) getSchema(msg ...PortTypeOperationMessage) (schema xsd.Schema, element string, service *Definitions, err error) {
+func (self *Definitions) getSchema(msg ...PortTypeOperationMessage) (schema xsd.Schema, element string, service *Definitions, err error) {
 	for _, s := range msg {
-		service = d
+		service = self
 		if s.Message == "" {
 			continue
 		}
@@ -232,8 +231,8 @@ func (d *Definitions) getSchema(msg ...PortTypeOperationMessage) (schema xsd.Sch
 	return
 }
 
-func (d *Definitions) getOperations(operation string) (bndOp BindingOperation, ptOp PortTypeOperation, err error) {
-	service := *d
+func (self *Definitions) getOperations(operation string) (bndOp BindingOperation, ptOp PortTypeOperation, err error) {
+	service := *self
 	parts := strings.Split(service.Service.Port.Binding, ":")
 	switch len(parts) {
 	case 2:
@@ -296,20 +295,15 @@ func (d *Definitions) getOperations(operation string) (bndOp BindingOperation, p
 
 		err = fmt.Errorf("did not find binding '%s'", parts[0])
 	default:
-		err = fmt.Errorf("malformed binding information: '%s'", d.Service.Port.Binding)
+		err = fmt.Errorf("malformed binding information: '%s'", self.Service.Port.Binding)
 	}
 
 	return
 }
 
 // Unmarhsals the WSDL definitions into the Definitions struct
-func (d *Definitions) GetDefinitions(client *client.Client, url string) error {
-	err := client.MakeRequest("GET", url, nil, d)
-	if err != nil {
-		err = errors.Wrap(err, "Error making SOAP request")
-		return err
-	}
-	return nil
+func (self *Definitions) GetDefinitions(client *client.Client, url string) (err error) {
+	err = client.MakeRequest("GET", url, nil, self)
 	/*
 		TODO: Not sure where this came from, but let's remove commented out code where possible
 		var resp *http.Response
@@ -335,44 +329,45 @@ func (d *Definitions) GetDefinitions(client *client.Client, url string) error {
 		// bts, _ = httputil.DumpResponse(resp, true)
 		// fmt.Println(string(bts))
 
-		err = xml.NewDecoder(resp.Body).Decode(d)
+		err = xml.NewDecoder(resp.Body).Decode(self)
 		if err != nil {
 			return
 		}*/
+	return
 }
 
 // Gets the base wsdl import, binding and operation definitions, adds imports and schema definitions
-func (d *Definitions) GetService(client *client.Client, url string) error {
+func (self *Definitions) GetService(client *client.Client, url string) (err error) {
 	log.Printf("Get Definitions 1: %s", url)
-	err := d.GetDefinitions(client, url)
+	err = self.GetDefinitions(client, url)
 	if err != nil {
-		return err
+		return
 	}
 
-	if d.Service.Name == "" {
-		err = fmt.Errorf("invalid service name '%s' for url '%s'", d.Service.Name, url)
-		return err
+	if self.Service.Name == "" {
+		err = fmt.Errorf("invalid service name '%s' for url '%s'", self.Service.Name, url)
+		return
 	}
-	log.Printf("adding service '%s' from '%s'", d.Service.Name, url)
+	log.Printf("adding service '%s' from '%s'", self.Service.Name, url)
 
 	log.Printf("adding all imports")
-	err = d.AddImports(client)
+	err = self.AddImports(client)
 	if err != nil {
-		return err
+		return
 	}
 
-	return nil
+	return
 }
 
 // Gets wsdl schema definitions and recursively adds any additional imports
-func (d *Definitions) AddImports(client *client.Client) error {
+func (self *Definitions) AddImports(client *client.Client) (err error) {
 	imports := []Import{}
-	for _, val := range d.Imports {
+	for _, val := range self.Imports {
 		imports = append(imports, val)
 	}
 
 	for i := range imports {
-		if _, ok := d.ImportDefinitions[d.GetAlias(imports[i].Namespace)]; ok {
+		if _, ok := self.ImportDefinitions[self.GetAlias(imports[i].Namespace)]; ok {
 			log.Printf("skipping import from '%s', already added", imports[i].Location)
 			continue
 		}
@@ -383,18 +378,18 @@ func (d *Definitions) AddImports(client *client.Client) error {
 			ImportDefinitions: make(map[string]Definitions),
 		}
 		log.Printf("Get Definitions 2: %s", imports[i].Location)
-		err := definitions.GetDefinitions(client, imports[i].Location)
+		err = definitions.GetDefinitions(client, imports[i].Location)
 		if err != nil {
-			return err
+			return
 		}
 
 		err = definitions.AddImports(client)
 		if err != nil {
-			return err
+			return
 		}
 
-		d.ImportDefinitions[d.GetAlias(imports[i].Namespace)] = *definitions
+		self.ImportDefinitions[self.GetAlias(imports[i].Namespace)] = *definitions
 	}
 
-	return nil
+	return
 }

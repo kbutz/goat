@@ -24,60 +24,60 @@ func NewWebservice() Webservice {
 	return ws
 }
 
-func (w *Webservice) UseHeader(header *http.Header) {
+func (self *Webservice) UseHeader(header *http.Header) {
 	if header != nil {
-		w.client.Header = header
+		self.client.Header = header
 	}
 }
 
-func (w *Webservice) UseHistory() {
-	w.client.UseHistory = true
-	w.ClearHistory()
+func (self *Webservice) UseHistory() {
+	self.client.UseHistory = true
+	self.ClearHistory()
 }
 
-func (w *Webservice) UseClient(client *http.Client) {
+func (self *Webservice) UseClient(client *http.Client) {
 	if client != nil {
-		w.client.Client = client
+		self.client.Client = client
 	}
 }
 
-func (w *Webservice) ClearHistory() {
-	w.client.History = []client.History{}
+func (self *Webservice) ClearHistory() {
+	self.client.History = []client.History{}
 }
 
-func (w *Webservice) IgnoreHistory() {
-	w.client.UseHistory = false
-	w.ClearHistory()
+func (self *Webservice) IgnoreHistory() {
+	self.client.UseHistory = false
+	self.ClearHistory()
 }
 
-func (w *Webservice) GetLatestHistory() (history *client.History) {
-	if w.client.UseHistory == false {
+func (self *Webservice) GetLatestHistory() (history *client.History) {
+	if self.client.UseHistory == false {
 		return nil
 	}
 
-	return &w.client.History[len(w.client.History)-1]
+	return &self.client.History[len(self.client.History)-1]
 }
 
-func (w *Webservice) GetHistory() (history *[]client.History) {
-	if w.client.UseHistory == false {
+func (self *Webservice) GetHistory() (history *[]client.History) {
+	if self.client.UseHistory == false {
 		return nil
 	}
 
-	return &w.client.History
+	return &self.client.History
 }
 
 // Adds your WSDL service or services
-func (w *Webservice) AddServices(urls ...string) (err error) {
+func (self *Webservice) AddServices(urls ...string) (err error) {
 	for _, u := range urls {
 		service := &wsdl.Definitions{
 			Aliases:           make(map[string]string),
 			ImportDefinitions: make(map[string]wsdl.Definitions),
 		}
-		err = service.GetService(&w.client, u)
+		err = service.GetService(&self.client, u)
 		if err != nil {
 			return
 		}
-		w.services[service.Service.Name] = service
+		self.services[service.Service.Name] = service
 	}
 
 	return
