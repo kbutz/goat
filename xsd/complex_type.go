@@ -12,11 +12,11 @@ type ComplexType struct {
 	XMLName  xml.Name `xml:"http://www.w3.org/2001/XMLSchema complexType"`
 	Name     string   `xml:"name,attr"`
 	Abstract bool     `xml:"abstract,attr"`
-	Sequence Sequence `xml:"sequence"`
-	//Sequence []Element        `xml:"sequence>element"`
-	//Choice []Element 	     `xml:"choice>element"`
-	//SequenceChoice []Element `xml:"sequence>choice>element"`
-	Content *ComplexContent `xml:"http://www.w3.org/2001/XMLSchema complexContent"`
+	//Sequence Sequence `xml:"sequence"`
+	Sequence       []Element       `xml:"sequence>element"`
+	Choice         []Element       `xml:"choice>element"`
+	SequenceChoice []Element       `xml:"sequence>choice>element"`
+	Content        *ComplexContent `xml:"http://www.w3.org/2001/XMLSchema complexContent"`
 }
 
 type Sequence struct {
@@ -36,7 +36,7 @@ type Extension struct {
 }
 
 func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
-	for _, e := range self.Sequence.Elements {
+	for _, e := range self.Sequence {
 		err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 		if err != nil {
 			err = errors.Wrap(err, "Error encoding Sequence.Element")
@@ -49,7 +49,7 @@ func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAli
 	// If more than one, return error
 	// If one, start encoding - if any of the child element types are also choices, they will need to meet the same criteria
 	submittedChoices := 0
-	for _, e := range self.Sequence.Choice {
+	for _, e := range self.Choice {
 		if hasPrefix(params, MakePath(append(path, e.Name))) {
 			submittedChoices++
 		}
@@ -63,7 +63,7 @@ func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAli
 
 	if submittedChoices == 1 {
 		fmt.Println("There was a single choice block submitted on the params, attempt to encode the choice elements")
-		for _, e := range self.Sequence.Choice {
+		for _, e := range self.Choice {
 			if hasPrefix(params, MakePath(append(path, e.Name))) {
 				fmt.Println("Encoding CHOICE: " + fmt.Sprintf("%+v", e))
 				err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
@@ -75,22 +75,32 @@ func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAli
 		}
 	}
 
-	//expectedChoiceErrors := len(self.Sequence.Choice) - 1
-	//choiceErrorCount := 0
-	//for _, e := range self.Sequence.Choice {
-	//	fmt.Println("Encoding CHOICE: " + fmt.Sprintf("%+v", e))
-	//	choiceErr := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
-	//	if choiceErr != nil {
-	//		choiceErrorCount++
-	//		fmt.Println("ERROR COUNT++ ", choiceErr)
-	//	}
-	//}
-	//
-	//// TODO: The last condition needs to go away. I think this library has just been disrespecting the choice element, allowing us to send malformed (but somehow passing) XML...
-	//if len(self.Sequence.Choice) > 0 && choiceErrorCount != expectedChoiceErrors && choiceErrorCount != len(self.Sequence.Choice) {
-	//	err := fmt.Errorf("choice error of %+v was not equal to expect choice error count of %+v or equal to choice count of %+v", choiceErrorCount, expectedChoiceErrors, len(self.Sequence.Choice))
-	//	return err
-	//}
+	submittedSequenceChoices := 0
+	for _, e := range self.SequenceChoice {
+		if hasPrefix(params, MakePath(append(path, e.Name))) {
+			submittedSequenceChoices++
+		}
+	}
+
+	fmt.Println(fmt.Sprintf("submittedSequenceChoices: %+v for %s", submittedSequenceChoices, self.Name))
+
+	if submittedSequenceChoices > 1 {
+		return errors.New("A max of one choice element can be submitted")
+	}
+
+	if submittedSequenceChoices == 1 {
+		fmt.Println("There was a single choice block submitted on the params, attempt to encode the choice elements")
+		for _, e := range self.SequenceChoice {
+			if hasPrefix(params, MakePath(append(path, e.Name))) {
+				fmt.Println("Encoding SEQUENCE>CHOICE: " + fmt.Sprintf("%+v", e))
+				err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
+				if err != nil {
+					err = errors.Wrap(err, "Error encoding Sequence.Choice")
+					return err
+				}
+			}
+		}
+	}
 
 	fmt.Println("self.Content: " + fmt.Sprintf("%+v", self.Content))
 	if self.Content != nil {

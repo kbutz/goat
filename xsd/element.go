@@ -90,7 +90,7 @@ func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser
 			return err
 		}
 	} else if self.ComplexTypes != nil {
-		for _, e := range self.ComplexTypes.Sequence.Elements {
+		for _, e := range self.ComplexTypes.Sequence {
 			err = e.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, self.Name)...)
 			if err != nil {
 				err = errors.Wrap(err, "Error encoding ComplexTypes.Sequence.Elements")
@@ -98,22 +98,21 @@ func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser
 			}
 		}
 
-		//submittedChoices := 0
-		//for _, e := range self.ComplexTypes.Sequence.Choice {
-		//	if hasPrefix(params, MakePath(append(path, e.Name))) {
-		//		submittedChoices++
-		//	}
-		//}
-		//
-		//fmt.Println(fmt.Sprintf("submittedChoices: %+v for %s", submittedChoices, self.Name))
+		for _, e := range self.ComplexTypes.Choice {
+			// TODO: We don't actually need to do any choice validation here, I think. e.Encode will attempt to encode
+			//		a type once one is reached, which will either encode the simple type with no validation, or the
+			//		complexType with the choice validations
+			err = e.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, self.Name)...)
+			err = errors.Wrap(err, "Error encoding ComplexTypes.Sequence.Choice")
+			if err != nil {
+				return err
+			}
+		}
 
-		for _, e := range self.ComplexTypes.Sequence.Choice {
-			// First, verify that one nad only one of the choices for this path has been submitted on the params
-			// If none, continue do not encode
-			// If more than one, return error
-			// If one, start encoding - if any of the child element types are also choices, they will need to meet the same criteria
-			// or abort with the error.
-
+		for _, e := range self.ComplexTypes.SequenceChoice {
+			// TODO: We don't actually need to do any choice validation here, I think. e.Encode will attempt to encode
+			//		a type once one is reached, which will either encode the simple type with no validation, or the
+			//		complexType with the choice validations
 			err = e.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, self.Name)...)
 			err = errors.Wrap(err, "Error encoding ComplexTypes.Sequence.Choice")
 			if err != nil {
