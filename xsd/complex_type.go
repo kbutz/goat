@@ -13,6 +13,7 @@ type ComplexType struct {
 	Name     string   `xml:"name,attr"`
 	Abstract bool     `xml:"abstract,attr"`
 	Sequence Sequence `xml:"sequence"`
+	//Sequence []Element       `xml:"sequence>element"`
 	//Sequence []Element        `xml:"sequence>element"`
 	//Choice []Element 	     `xml:"choice>element"`
 	//SequenceChoice []Element `xml:"sequence>choice>element"`
@@ -44,22 +45,35 @@ func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAli
 		}
 	}
 
-	expectedChoiceErrors := len(self.Sequence.Choice) - 1
-	choiceErrorCount := 0
+	// First, verify that one nad only one of the choices for this path has been submitted on the params
+	// If none, continue do not encode
+	// If more than one, return error
+	// If one, start encoding - if any of the child element types are also choices, they will need to meet the same criteria
+	submittedChoices := 0
 	for _, e := range self.Sequence.Choice {
-		fmt.Println("Encoding CHOICE: " + fmt.Sprintf("%+v", e))
-		choiceErr := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
-		if choiceErr != nil {
-			choiceErrorCount++
-			fmt.Println("ERROR COUNT++ ", choiceErr)
+		if hasPrefix(params, MakePath(append(path, e.Name))) {
+			submittedChoices++
 		}
 	}
 
-	// TODO: The last condition needs to go away. I think this library has just been disrespecting the choice element, allowing us to send malformed (but somehow passing) XML...
-	if len(self.Sequence.Choice) > 0 && choiceErrorCount != expectedChoiceErrors && choiceErrorCount != len(self.Sequence.Choice) {
-		err := fmt.Errorf("choice error of %+v was not equal to expect choice error count of %+v or equal to choice count of %+v", choiceErrorCount, expectedChoiceErrors, len(self.Sequence.Choice))
-		return err
-	}
+	fmt.Println(fmt.Sprintf("submittedChoices: %+v for %s", submittedChoices, self.Name))
+
+	//expectedChoiceErrors := len(self.Sequence.Choice) - 1
+	//choiceErrorCount := 0
+	//for _, e := range self.Sequence.Choice {
+	//	fmt.Println("Encoding CHOICE: " + fmt.Sprintf("%+v", e))
+	//	choiceErr := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
+	//	if choiceErr != nil {
+	//		choiceErrorCount++
+	//		fmt.Println("ERROR COUNT++ ", choiceErr)
+	//	}
+	//}
+	//
+	//// TODO: The last condition needs to go away. I think this library has just been disrespecting the choice element, allowing us to send malformed (but somehow passing) XML...
+	//if len(self.Sequence.Choice) > 0 && choiceErrorCount != expectedChoiceErrors && choiceErrorCount != len(self.Sequence.Choice) {
+	//	err := fmt.Errorf("choice error of %+v was not equal to expect choice error count of %+v or equal to choice count of %+v", choiceErrorCount, expectedChoiceErrors, len(self.Sequence.Choice))
+	//	return err
+	//}
 
 	fmt.Println("self.Content: " + fmt.Sprintf("%+v", self.Content))
 	if self.Content != nil {

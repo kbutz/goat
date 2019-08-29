@@ -55,18 +55,20 @@ func (baseSchema) EncodeElement(name string, enc *xml.Encoder, sr SchemaReposito
 	return fmt.Errorf("not implemented")
 }
 
-func (baseSchema) EncodeType(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) (err error) {
+func (baseSchema) EncodeType(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
 	v, ok := params[MakePath(path)]
 	if !ok {
-		err = fmt.Errorf("did not find data '%s' in path", MakePath(path))
-		return
+		err := fmt.Errorf("did not find data '%s' in path", MakePath(path))
+		fmt.Println(err)
+		//return err
+		return err
 	}
 
 	var del bool
 	var newVal interface{}
-	del, newVal, err = encodeInterfaceType(name, enc, v)
+	del, newVal, err := encodeInterfaceType(name, enc, v)
 	if err != nil {
-		return
+		return err
 	}
 
 	if newVal != nil {
@@ -76,7 +78,7 @@ func (baseSchema) EncodeType(name string, enc *xml.Encoder, sr SchemaRepository,
 	if del {
 		delete(params, MakePath(path))
 	}
-	return
+	return nil
 }
 
 func encodeInterfaceType(name string, enc *xml.Encoder, v interface{}) (del bool, newVal interface{}, err error) {

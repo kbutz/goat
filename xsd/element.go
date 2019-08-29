@@ -51,13 +51,22 @@ func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser
 	}
 
 	// TODO: Remove all of these debugging logs
-	fmt.Println("*Element: " + fmt.Sprintf("%+v", self))
+	//fmt.Println("*Element: " + fmt.Sprintf("%+v", self))
 	//fmt.Println("Name: " + fmt.Sprintf("%+v", self.Name))
 	//fmt.Println("Type: " + fmt.Sprintf("%+v", self.Type))
 	//fmt.Println("ComplexTypes: " + fmt.Sprintf("%+v", self.ComplexTypes))
-	if self.ComplexTypes != nil {
-		fmt.Println("ComplexTypes.Sequence" + fmt.Sprintf("%+v", self.ComplexTypes.Sequence))
-	}
+	//if self.ComplexTypes != nil {
+	//	fmt.Println("ComplexTypes.Sequence" + fmt.Sprintf("%+v", self.ComplexTypes.Sequence))
+	//}
+
+	// If we've reached a an element with a Type, try to encode the type.
+	// EncodeType will get the cached schema definition from self.Definitions and attempt to encode the type
+	// based on the complexType or simpleType schema definition it has stored.
+	// If the current element itself is an empty ComplexType tag, recursively call Encode until all elements have been encoded
+	// TODO: For complexTypes with sequence>choice>element and choice>element, we need special handling since we don't want
+	//		to force *all* of the elements to be encoded or abort. Here, we want *at least one* element encoded...
+	//		This gets a little tricky with how this implementation handles encoding the XML - we need a way to abort/rollback a
+	//		choice element that could not be encoded...
 	if self.Type != "" {
 		parts := strings.Split(self.Type, ":")
 		switch len(parts) {
@@ -89,7 +98,22 @@ func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser
 			}
 		}
 
+		//submittedChoices := 0
+		//for _, e := range self.ComplexTypes.Sequence.Choice {
+		//	if hasPrefix(params, MakePath(append(path, e.Name))) {
+		//		submittedChoices++
+		//	}
+		//}
+		//
+		//fmt.Println(fmt.Sprintf("submittedChoices: %+v for %s", submittedChoices, self.Name))
+
 		for _, e := range self.ComplexTypes.Sequence.Choice {
+			// First, verify that one nad only one of the choices for this path has been submitted on the params
+			// If none, continue do not encode
+			// If more than one, return error
+			// If one, start encoding - if any of the child element types are also choices, they will need to meet the same criteria
+			// or abort with the error.
+
 			err = e.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, self.Name)...)
 			err = errors.Wrap(err, "Error encoding ComplexTypes.Sequence.Choice")
 			if err != nil {
