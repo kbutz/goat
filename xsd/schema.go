@@ -24,62 +24,55 @@ type Schema struct {
 	InnerSchema
 }
 
-func (s *Schema) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	err := d.DecodeElement(&s.InnerSchema, &start)
+func (self *Schema) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) {
+	err = d.DecodeElement(&self.InnerSchema, &start)
 	if err != nil {
-		return err
+		return
 	}
 
-	s.XMLName = start.Name
-	s.Aliases = map[string]string{}
+	self.XMLName = start.Name
+	self.Aliases = map[string]string{}
 
 	for _, attr := range start.Attr {
-		s.Aliases[attr.Name.Local] = attr.Value
+		self.Aliases[attr.Name.Local] = attr.Value
 	}
-	return nil
+	return
 }
 
-func (s *Schema) Namespace() string {
-	return s.TargetNamespace
+func (self *Schema) Namespace() string {
+	return self.TargetNamespace
 }
 
-func (s *Schema) GetAlias(alias string) (space string) {
-	return s.Aliases[alias]
+func (self *Schema) GetAlias(alias string) (space string) {
+	return self.Aliases[alias]
 }
 
-// EncodeElement : Begins encoding to XML from the top level body element, calling Encode and EncodeType recursively on the
-// nested elements until there are no more to be encoded.
-func (s *Schema) EncodeElement(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
+func (self *Schema) EncodeElement(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
 	// Starts encoding the top level xml element
-	//fmt.Println(fmt.Sprintf("Elements: %+v", s.Elements))
-	for _, elem := range s.Elements {
+	//fmt.Println(fmt.Sprintf("Elements: %+v", self.Elements))
+	for _, elem := range self.Elements {
 		if elem.Name == name {
 			fmt.Println("elem.Name == name: " + fmt.Sprintf("%+v", elem))
 			// elem.Name == "transaction-continue" or "transaction-identity-verification", for example
-			err := elem.Encode(enc, sr, s, params, useNamespace, keepUsingNamespace, path...)
-			if err != nil {
-				fmt.Println(err)
-				return err
-			}
-			return nil
+			return elem.Encode(enc, sr, self, params, useNamespace, keepUsingNamespace, path...)
 		}
 	}
 
 	return fmt.Errorf("did not find element '%s'", name)
 }
 
-func (s *Schema) EncodeType(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
-	for _, cmplx := range s.ComplexTypes {
+func (self *Schema) EncodeType(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
+	for _, cmplx := range self.ComplexTypes {
 		if cmplx.Name == name {
 			fmt.Println("cmplx.Name == name, cmplx: " + fmt.Sprintf("%+v", cmplx))
-			return cmplx.Encode(enc, sr, s, params, useNamespace, keepUsingNamespace, path...)
+			return cmplx.Encode(enc, sr, self, params, useNamespace, keepUsingNamespace, path...)
 		}
 	}
 
-	for _, smpl := range s.SimpleTypes {
+	for _, smpl := range self.SimpleTypes {
 		if smpl.Name == name {
 			fmt.Println("smpl.Name == name, cmplx: " + fmt.Sprintf("%+v", smpl))
-			return smpl.Encode(enc, sr, s, params, useNamespace, keepUsingNamespace, path...)
+			return smpl.Encode(enc, sr, self, params, useNamespace, keepUsingNamespace, path...)
 		}
 	}
 
