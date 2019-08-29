@@ -36,8 +36,8 @@ type Extension struct {
 	Sequence []Element `xml:"sequence>element"`
 }
 
-func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
-	for _, e := range self.Sequence.Elements {
+func (c *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
+	for _, e := range c.Sequence.Elements {
 		err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 		if err != nil {
 			err = errors.Wrap(err, "Error encoding Sequence.Element")
@@ -50,17 +50,17 @@ func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAli
 	// If more than one, return error
 	// If one, start encoding - if any of the child element types are also choices, they will need to meet the same criteria
 	submittedChoices := 0
-	for _, e := range self.Sequence.Choice {
+	for _, e := range c.Sequence.Choice {
 		if hasPrefix(params, MakePath(append(path, e.Name))) {
 			submittedChoices++
 		}
 	}
 
-	fmt.Println(fmt.Sprintf("submittedChoices: %+v for %s", submittedChoices, self.Name))
+	fmt.Println(fmt.Sprintf("submittedChoices: %+v for %s", submittedChoices, c.Name))
 
-	//expectedChoiceErrors := len(self.Sequence.Choice) - 1
+	//expectedChoiceErrors := len(c.Sequence.Choice) - 1
 	//choiceErrorCount := 0
-	//for _, e := range self.Sequence.Choice {
+	//for _, e := range c.Sequence.Choice {
 	//	fmt.Println("Encoding CHOICE: " + fmt.Sprintf("%+v", e))
 	//	choiceErr := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 	//	if choiceErr != nil {
@@ -70,14 +70,14 @@ func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAli
 	//}
 	//
 	//// TODO: The last condition needs to go away. I think this library has just been disrespecting the choice element, allowing us to send malformed (but somehow passing) XML...
-	//if len(self.Sequence.Choice) > 0 && choiceErrorCount != expectedChoiceErrors && choiceErrorCount != len(self.Sequence.Choice) {
-	//	err := fmt.Errorf("choice error of %+v was not equal to expect choice error count of %+v or equal to choice count of %+v", choiceErrorCount, expectedChoiceErrors, len(self.Sequence.Choice))
+	//if len(c.Sequence.Choice) > 0 && choiceErrorCount != expectedChoiceErrors && choiceErrorCount != len(c.Sequence.Choice) {
+	//	err := fmt.Errorf("choice error of %+v was not equal to expect choice error count of %+v or equal to choice count of %+v", choiceErrorCount, expectedChoiceErrors, len(c.Sequence.Choice))
 	//	return err
 	//}
 
-	fmt.Println("self.Content: " + fmt.Sprintf("%+v", self.Content))
-	if self.Content != nil {
-		parts := strings.Split(self.Content.Extension.Base, ":")
+	fmt.Println("c.Content: " + fmt.Sprintf("%+v", c.Content))
+	if c.Content != nil {
+		parts := strings.Split(c.Content.Extension.Base, ":")
 		switch len(parts) {
 		case 2:
 			var schema Schemaer
@@ -93,11 +93,11 @@ func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAli
 				return err
 			}
 		default:
-			err := fmt.Errorf("malformed base '%s' in path %q", self.Content.Extension.Base, path)
+			err := fmt.Errorf("malformed base '%s' in path %q", c.Content.Extension.Base, path)
 			return err
 		}
 
-		for _, e := range self.Content.Extension.Sequence {
+		for _, e := range c.Content.Extension.Sequence {
 			err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 			if err != nil {
 				err = errors.Wrap(err, "Error encoding from Content.Extension.Sequence")
