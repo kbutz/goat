@@ -27,3 +27,5 @@ _testmain.go
 # IDE specific files
 .vscode
 .idea
+
+/fixtures/*
