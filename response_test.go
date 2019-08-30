@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/kbutz/goat/client"
-	"github.com/kbutz/goat/wsdl"
+	"github.com/sezzle/goat/client"
+	"github.com/sezzle/goat/wsdl"
 )
 
 func TestWebservice_Do_ErrorPath_NoServiceFound(t *testing.T) {
