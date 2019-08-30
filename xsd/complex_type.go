@@ -41,53 +41,14 @@ func (c *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliase
 		}
 	}
 
-	// TODO: After writing some tests, refactor this to use EncodeChoice
-	// First, verify that one and only one of the choices for this path has been submitted on the params
-	// If none, continue do not encode
-	// If more than one, return error
-	// If one, start encoding - if any of the child element types are also choices, they will need to meet the same criteria
-	submittedChoices := 0
-	for _, e := range c.Choice {
-		if hasPrefix(params, MakePath(append(path, e.Name))) {
-			submittedChoices++
-		}
+	err := c.EncodeChoice(c.Choice, enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
+	if err != nil {
+		return err
 	}
 
-	if submittedChoices > 1 {
-		return errors.New("A max of one choice element can be submitted")
-	}
-
-	if submittedChoices == 1 {
-		for _, e := range c.Choice {
-			if hasPrefix(params, MakePath(append(path, e.Name))) {
-				err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	submittedSequenceChoices := 0
-	for _, e := range c.SequenceChoice {
-		if hasPrefix(params, MakePath(append(path, e.Name))) {
-			submittedSequenceChoices++
-		}
-	}
-
-	if submittedSequenceChoices > 1 {
-		return errors.New("A max of one choice element can be submitted")
-	}
-
-	if submittedSequenceChoices == 1 {
-		for _, e := range c.SequenceChoice {
-			if hasPrefix(params, MakePath(append(path, e.Name))) {
-				err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
-				if err != nil {
-					return err
-				}
-			}
-		}
+	err = c.EncodeChoice(c.SequenceChoice, enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
+	if err != nil {
+		return err
 	}
 
 	if c.Content != nil {
