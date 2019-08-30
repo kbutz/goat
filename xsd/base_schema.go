@@ -36,7 +36,6 @@ var mappings = []mapping{
 		kinds:     []reflect.Kind{reflect.String},
 		format:    "%s",
 	},
-	// TODO: need to support dateTime
 	{
 		xsdSchema: []string{"dateTime"},
 		kinds:     []reflect.Kind{reflect.String},
@@ -51,11 +50,11 @@ var mappings = []mapping{
 type baseSchema struct{}
 
 // http://www.w3.org/2001/XMLSchema-datatypes does not have elements.
-func (baseSchema) EncodeElement(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
+func (b baseSchema) EncodeElement(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
 	return fmt.Errorf("not implemented")
 }
 
-func (baseSchema) EncodeType(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
+func (b baseSchema) EncodeType(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
 	v, ok := params[MakePath(path)]
 	if !ok {
 		err := fmt.Errorf("did not find data '%s' in path", MakePath(path))

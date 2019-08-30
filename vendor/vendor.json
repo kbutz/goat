@@ -3,11 +3,17 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "IHIm2BA6DrJDHvALz65pY2G38sM=",
+			"path": "github.com/golang/mock/gomock",
+			"revision": "dd8d2a22370e4c8a334e80ca8477f71356c8e4bb",
+			"revisionTime": "2019-07-13T10:24:42Z"
+		},
+		{
 			"checksumSHA1": "VZ/SERB6PeXDyy6BEyZ4qIRuK0M=",
 			"path": "github.com/sezzle/sezzle-go-xml",
 			"revision": "f2c933a16f4af16e00e729c2b71ff6470c30f3f5",
 			"revisionTime": "2018-06-14T16:46:24Z"
 		}
 	],
-	"rootPath": "sezzle/goat"
+	"rootPath": "github.com/kbutz/goat"
 }

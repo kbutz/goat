@@ -1,28 +1,25 @@
 package xsd
 
 import (
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"strings"
 
 	"github.com/sezzle/sezzle-go-xml"
 )
 
 type ComplexType struct {
-	XMLName  xml.Name `xml:"http://www.w3.org/2001/XMLSchema complexType"`
-	Name     string   `xml:"name,attr"`
-	Abstract bool     `xml:"abstract,attr"`
-	Sequence Sequence `xml:"sequence"`
-	//Sequence []Element       `xml:"sequence>element"`
-	//Sequence []Element        `xml:"sequence>element"`
-	//Choice []Element 	     `xml:"choice>element"`
-	//SequenceChoice []Element `xml:"sequence>choice>element"`
-	Content *ComplexContent `xml:"http://www.w3.org/2001/XMLSchema complexContent"`
-}
-
-type Sequence struct {
-	Elements []Element `xml:"element"`
-	Choice   []Element `xml:"choice>element"`
+	XMLName        xml.Name        `xml:"http://www.w3.org/2001/XMLSchema complexType"`
+	Name           string          `xml:"name,attr"`
+	Abstract       bool            `xml:"abstract,attr"`
+	Sequence       []Element       `xml:"sequence>element"`        // Specifies that all of the elements the child elements must appear in a sequence 0 to any number of times
+	Choice         []Element       `xml:"choice>element"`          // Allows only one or zero of the elements contained int the declaration to be present within the containing element
+	SequenceChoice []Element       `xml:"sequence>choice>element"` // Allows only one or zero of the elements contained int the declaration to be present within the containing element
+	Content        *ComplexContent `xml:"http://www.w3.org/2001/XMLSchema complexContent"`
+	// TODO: By XML definition, a choice will require one of the elements unless the choice block's minOccurs is 0. We're not currently handling this and just allowing no choice blocks to be submitted
+	// TODO: All   - Missing the <xs:all schema component, which specifies that the child elements can appear in any order.
+	// TODO: Group - Missing <xs:group schema component (remove me - see DescribeVpcAttributesGroup)
+	// TODO: Does not support choice>sequence>elements nested schemas
 }
 
 type ComplexContent struct {
@@ -36,72 +33,77 @@ type Extension struct {
 	Sequence []Element `xml:"sequence>element"`
 }
 
-func (self *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
-	for _, e := range self.Sequence.Elements {
+func (c *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
+	for _, e := range c.Sequence {
 		err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 		if err != nil {
-			err = errors.Wrap(err, "Error encoding Sequence.Element")
 			return err
 		}
 	}
 
-	// First, verify that one nad only one of the choices for this path has been submitted on the params
-	// If none, continue do not encode
-	// If more than one, return error
-	// If one, start encoding - if any of the child element types are also choices, they will need to meet the same criteria
-	submittedChoices := 0
-	for _, e := range self.Sequence.Choice {
-		if hasPrefix(params, MakePath(append(path, e.Name))) {
-			submittedChoices++
-		}
+	err := c.EncodeChoice(c.Choice, enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
+	if err != nil {
+		return err
 	}
 
-	fmt.Println(fmt.Sprintf("submittedChoices: %+v for %s", submittedChoices, self.Name))
+	err = c.EncodeChoice(c.SequenceChoice, enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
+	if err != nil {
+		return err
+	}
 
-	//expectedChoiceErrors := len(self.Sequence.Choice) - 1
-	//choiceErrorCount := 0
-	//for _, e := range self.Sequence.Choice {
-	//	fmt.Println("Encoding CHOICE: " + fmt.Sprintf("%+v", e))
-	//	choiceErr := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
-	//	if choiceErr != nil {
-	//		choiceErrorCount++
-	//		fmt.Println("ERROR COUNT++ ", choiceErr)
-	//	}
-	//}
-	//
-	//// TODO: The last condition needs to go away. I think this library has just been disrespecting the choice element, allowing us to send malformed (but somehow passing) XML...
-	//if len(self.Sequence.Choice) > 0 && choiceErrorCount != expectedChoiceErrors && choiceErrorCount != len(self.Sequence.Choice) {
-	//	err := fmt.Errorf("choice error of %+v was not equal to expect choice error count of %+v or equal to choice count of %+v", choiceErrorCount, expectedChoiceErrors, len(self.Sequence.Choice))
-	//	return err
-	//}
-
-	fmt.Println("self.Content: " + fmt.Sprintf("%+v", self.Content))
-	if self.Content != nil {
-		parts := strings.Split(self.Content.Extension.Base, ":")
+	if c.Content != nil {
+		parts := strings.Split(c.Content.Extension.Base, ":")
 		switch len(parts) {
 		case 2:
 			var schema Schemaer
 			schema, err := sr.GetSchema(ga.GetAlias(parts[0]))
 			if err != nil {
-				err = errors.Wrap(err, "Error getting schema from "+parts[0])
 				return err
 			}
 
 			err = schema.EncodeType(parts[1], enc, sr, params, keepUsingNamespace, keepUsingNamespace, path...)
 			if err != nil {
-				err = errors.Wrap(err, "Error encoding type for "+parts[1])
 				return err
 			}
 		default:
-			err := fmt.Errorf("malformed base '%s' in path %q", self.Content.Extension.Base, path)
+			err := fmt.Errorf("malformed base '%s' in path %q", c.Content.Extension.Base, path)
 			return err
 		}
 
-		for _, e := range self.Content.Extension.Sequence {
+		for _, e := range c.Content.Extension.Sequence {
 			err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 			if err != nil {
-				err = errors.Wrap(err, "Error encoding from Content.Extension.Sequence")
 				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *ComplexType) EncodeChoice(choiceElements []Element, enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
+	// First, verify that one and only one of the choices for this path has been submitted on the params
+	// If none, continue do not encode
+	// If more than one, return error
+	// If one, start encoding - if any of the child element types are also choices, they will need to meet the same criteria
+	submittedChoices := 0
+	for _, e := range choiceElements {
+		if hasPrefix(params, MakePath(append(path, e.Name))) {
+			submittedChoices++
+		}
+	}
+
+	if submittedChoices > 1 {
+		return errors.New("A max of one choice element can be submitted")
+	}
+
+	if submittedChoices == 1 {
+		for _, e := range choiceElements {
+			if hasPrefix(params, MakePath(append(path, e.Name))) {
+				err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
