@@ -359,7 +359,8 @@ func (d *Definitions) GetService(client *client.Client, url string) (err error) 
 	return
 }
 
-// Gets wsdl schema definitions and recursively adds any additional imports
+// AddImports : Gets wsdl schema definitions and recursively adds any additional imports - for example, if the
+// WSDL itself has an import to fetch the type definitions separately from the bindings and operations
 func (d *Definitions) AddImports(client *client.Client) (err error) {
 	imports := []Import{}
 	for _, val := range d.Imports {

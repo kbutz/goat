@@ -19,6 +19,7 @@ type ResponseEnvelope struct {
 	}
 }
 
+// NewRequest : Encodes and does some validations, writing an XML request to the supplied buffer
 func (w *Webservice) NewRequest(service, method string, params map[string]interface{}, buf io.Writer) (err error) {
 	s := w.services[service]
 	if s == nil {
