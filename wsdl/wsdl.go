@@ -109,7 +109,6 @@ func (d *Definitions) WriteRequest(operation string, w io.Writer, bodyParams map
 		return
 	}
 
-	// TODO: unhadled errors
 	fmt.Fprint(w, xml.Header)
 	enc := xml.NewEncoder(w)
 	//enc := xml.NewEncoder(io.MultiWriter(w, os.Stdout))
@@ -145,7 +144,6 @@ func (d *Definitions) WriteRequest(operation string, w io.Writer, bodyParams map
 	op, _ := xml.MarshalIndent(envelope, "  ", "    ")
 	fmt.Println(string(op))*/
 
-	// TODO: unhadled errors
 	enc.EncodeToken(envelope)
 	defer enc.EncodeToken(envelope.End())
 
@@ -169,16 +167,12 @@ func (d *Definitions) WriteRequest(operation string, w io.Writer, bodyParams map
 			Local:  "Body",
 		},
 	}
-	// TODO: unhadled errors
 	enc.EncodeToken(soapBody)
 
-	//fmt.Println("bodyservice.Types.Schemas: " + fmt.Sprintf("%+v", bodyService.Types.Schemas))
-	fmt.Println("bodyElement: " + fmt.Sprintf("%+v", bodyElement))
 	err = body.EncodeElement(bodyElement, enc, bodyService.Types.Schemas, bodyParams, true, false)
 	if err != nil {
 		return
 	}
-	// TODO: unhadled errors
 	enc.EncodeToken(soapBody.End())
 
 	return

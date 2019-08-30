@@ -16,8 +16,9 @@ type ComplexType struct {
 	Choice         []Element       `xml:"choice>element"`          // Allows only one or zero of the elements contained int the declaration to be present within the containing element
 	SequenceChoice []Element       `xml:"sequence>choice>element"` // Allows only one or zero of the elements contained int the declaration to be present within the containing element
 	Content        *ComplexContent `xml:"http://www.w3.org/2001/XMLSchema complexContent"`
-	// TODO: Missing the <xs:all schema component, which specifies that the child elements can appear in any order.
-	// NOTE: Does not support choice>sequence>elements nested schemas
+	// TODO: All   - Missing the <xs:all schema component, which specifies that the child elements can appear in any order.
+	// TODO: Group - Missing <xs:group schema component (remove me - see DescribeVpcAttributesGroup)
+	// TODO: Does not support choice>sequence>elements nested schemas
 }
 
 type ComplexContent struct {
