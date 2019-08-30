@@ -19,11 +19,15 @@ type History struct {
 }
 
 type Client struct {
-	Client *http.Client
+	Client HTTPClientDoer
 	Header *http.Header
 
 	UseHistory bool
 	History    []History
+}
+
+type HTTPClientDoer interface {
+	Do(req *http.Request) (*http.Response, error)
 }
 
 func (c *Client) MakeRequest(requestMethod, requestURL string, requestBody io.Reader, decodedResponse interface{}) (err error) {
@@ -58,11 +62,11 @@ func (c *Client) MakeRequest(requestMethod, requestURL string, requestBody io.Re
 	}
 
 	var resp *http.Response
-	client := http.DefaultClient
-	if c.Client != nil {
-		client = c.Client
-	}
-	resp, err = client.Do(req)
+	//client := http.DefaultClient
+	//if c.Client != nil {
+	//	client = c.Client
+	//}
+	resp, err = c.Client.Do(req)
 	if err != nil {
 		return
 	}
