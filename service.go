@@ -1,8 +1,8 @@
 package goat
 
 import (
-	"github.com/sezzle/goat/client"
-	"github.com/sezzle/goat/wsdl"
+	"github.com/kbutz/goat/client"
+	"github.com/kbutz/goat/wsdl"
 	"net/http"
 )
 

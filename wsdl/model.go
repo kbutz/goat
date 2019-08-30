@@ -3,7 +3,7 @@ package wsdl
 import (
 	"github.com/sezzle/sezzle-go-xml"
 
-	"github.com/sezzle/goat/xsd"
+	"github.com/kbutz/goat/xsd"
 )
 
 type Import struct {

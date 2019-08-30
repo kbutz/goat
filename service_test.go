@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/sezzle/goat/client"
-	"github.com/sezzle/goat/wsdl"
+	"github.com/kbutz/goat/client"
+	"github.com/kbutz/goat/wsdl"
 )
 
 func TestWebservice_AddServices_ErrorPath(t *testing.T) {
