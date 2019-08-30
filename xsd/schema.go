@@ -13,9 +13,6 @@ type InnerSchema struct {
 	ComplexTypes       []ComplexType `xml:"http://www.w3.org/2001/XMLSchema complexType"`
 	SimpleTypes        []SimpleType  `xml:"http://www.w3.org/2001/XMLSchema simpleType"`
 	Elements           []Element     `xml:"http://www.w3.org/2001/XMLSchema element"`
-	// TODO: need to handle Choice schema type
-	//		https://www.w3schools.com/xml/el_choice.asp
-	//		https://medium.com/eaciit-engineering/soap-wsdl-request-in-go-language-3861cfb5949e
 }
 
 type Schema struct {
@@ -51,11 +48,8 @@ func (s *Schema) GetAlias(alias string) (space string) {
 // nested elements until there are no more to be encoded.
 func (s *Schema) EncodeElement(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
 	// Starts encoding the top level xml element
-	//fmt.Println(fmt.Sprintf("Elements: %+v", s.Elements))
 	for _, elem := range s.Elements {
 		if elem.Name == name {
-			fmt.Println("elem.Name == name: " + fmt.Sprintf("%+v", elem))
-			// elem.Name == "transaction-continue" or "transaction-identity-verification", for example
 			return elem.Encode(enc, sr, s, params, useNamespace, keepUsingNamespace, path...)
 		}
 	}
@@ -66,14 +60,12 @@ func (s *Schema) EncodeElement(name string, enc *xml.Encoder, sr SchemaRepositor
 func (s *Schema) EncodeType(name string, enc *xml.Encoder, sr SchemaRepository, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
 	for _, cmplx := range s.ComplexTypes {
 		if cmplx.Name == name {
-			fmt.Println("cmplx.Name == name, cmplx: " + fmt.Sprintf("%+v", cmplx))
 			return cmplx.Encode(enc, sr, s, params, useNamespace, keepUsingNamespace, path...)
 		}
 	}
 
 	for _, smpl := range s.SimpleTypes {
 		if smpl.Name == name {
-			fmt.Println("smpl.Name == name, cmplx: " + fmt.Sprintf("%+v", smpl))
 			return smpl.Encode(enc, sr, s, params, useNamespace, keepUsingNamespace, path...)
 		}
 	}

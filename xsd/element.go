@@ -50,27 +50,15 @@ func (e *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, p
 		return err
 	}
 
-	// TODO: Remove all of these debugging logs
-	//fmt.Println("*Element: " + fmt.Sprintf("%+v", self))
-	//fmt.Println("Name: " + fmt.Sprintf("%+v", self.Name))
-	//fmt.Println("Type: " + fmt.Sprintf("%+v", self.Type))
-	//fmt.Println("ComplexTypes: " + fmt.Sprintf("%+v", self.ComplexTypes))
-	//if self.ComplexTypes != nil {
-	//	fmt.Println("ComplexTypes.Sequence" + fmt.Sprintf("%+v", self.ComplexTypes.Sequence))
-	//}
-
 	// If we've reached a an element with a Type, try to encode the type.
 	// EncodeType will get the cached schema definition from self.Definitions and attempt to encode the type
 	// based on the complexType or simpleType schema definition it has stored.
 	// If the current element itself is an empty ComplexType tag, recursively call Encode until all elements have been encoded
-	// TODO: For complexTypes with sequence>choice>element and choice>element, we need special handling since we don't want
-	//		to force *all* of the elements to be encoded or abort. Here, we want *at least one* element encoded...
-	//		This gets a little tricky with how this implementation handles encoding the XML - we need a way to abort/rollback a
-	//		choice element that could not be encoded...
 	if e.Type != "" {
 		parts := strings.Split(e.Type, ":")
 		switch len(parts) {
 		case 2:
+			// Get the appropriate schema encoder for the type based on the submitted element name
 			var schema Schemaer
 			schema, err = sr.GetSchema(ga.GetAlias(parts[0]))
 			if err != nil {
@@ -78,8 +66,6 @@ func (e *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, p
 				return err
 			}
 
-			// This isn't a helpful debug statement - the schema is the FULL wsdl definition map
-			//fmt.Println("self.Type != '', schema: " + fmt.Sprintf("%+v", schema))
 			err = schema.EncodeType(parts[1], enc, sr, params, keepUsingNamespace, keepUsingNamespace, append(path, e.Name)...)
 			if err != nil {
 				err = errors.Wrap(err, "Error encoding type for "+parts[1])
@@ -99,9 +85,9 @@ func (e *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, p
 		}
 
 		for _, element := range e.ComplexTypes.Choice {
-			// TODO: We don't actually need to do any choice validation here, I think. e.Encode will attempt to encode
-			//		a type once one is reached, which will either encode the simple type with no validation, or the
-			//		complexType with the choice validations
+			// We don't actually need to do any choice validation here, I think. e.Encode will attempt to encode
+			// a type once one is reached, which will either encode the simple type with no validation, or the
+			// complexType with the choice validations
 			err = element.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, e.Name)...)
 			err = errors.Wrap(err, "Error encoding ComplexTypes.Sequence.Choice")
 			if err != nil {
@@ -110,9 +96,9 @@ func (e *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, p
 		}
 
 		for _, element := range e.ComplexTypes.SequenceChoice {
-			// TODO: We don't actually need to do any choice validation here, I think. e.Encode will attempt to encode
-			//		a type once one is reached, which will either encode the simple type with no validation, or the
-			//		complexType with the choice validations
+			// We don't actually need to do any choice validation here, I think. e.Encode will attempt to encode
+			// a type once one is reached, which will either encode the simple type with no validation, or the
+			// complexType with the choice validations
 			err = element.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, e.Name)...)
 			err = errors.Wrap(err, "Error encoding ComplexTypes.Sequence.Choice")
 			if err != nil {
