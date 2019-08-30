@@ -35,7 +35,7 @@ func (w *Webservice) UseHistory() {
 	w.ClearHistory()
 }
 
-func (w *Webservice) UseClient(client *http.Client) {
+func (w *Webservice) UseClient(client client.HTTPClientDoer) {
 	if client != nil {
 		w.client.Client = client
 	}
