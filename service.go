@@ -68,18 +68,18 @@ func (w *Webservice) GetHistory() (history *[]client.History) {
 
 // AddServices : Given a submitted url or urls, unmarshal the wsdl definitions and store the unmarshalled definitions in memory
 // as "service". This will also fetch any additional imports on the WSDL
-func (w *Webservice) AddServices(urls ...string) (err error) {
+func (w *Webservice) AddServices(urls ...string) error {
 	for _, u := range urls {
 		service := &wsdl.Definitions{
 			Aliases:           make(map[string]string),
 			ImportDefinitions: make(map[string]wsdl.Definitions),
 		}
-		err = service.GetService(&w.client, u)
+		err := service.GetService(&w.client, u)
 		if err != nil {
-			return
+			return err
 		}
 		w.services[service.Service.Name] = service
 	}
 
-	return
+	return nil
 }

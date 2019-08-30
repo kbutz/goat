@@ -21,10 +21,10 @@ type Schema struct {
 	InnerSchema
 }
 
-func (s *Schema) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) {
-	err = d.DecodeElement(&s.InnerSchema, &start)
+func (s *Schema) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	err := d.DecodeElement(&s.InnerSchema, &start)
 	if err != nil {
-		return
+		return err
 	}
 
 	s.XMLName = start.Name
@@ -33,7 +33,7 @@ func (s *Schema) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error
 	for _, attr := range start.Attr {
 		s.Aliases[attr.Name.Local] = attr.Value
 	}
-	return
+	return nil
 }
 
 func (s *Schema) Namespace() string {

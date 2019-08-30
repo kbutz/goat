@@ -24,21 +24,23 @@ type Enumeration struct {
 	Value   string   `xml:"value,attr"`
 }
 
-func (s *SimpleType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) (err error) {
+func (s *SimpleType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
 	name := s.Restriction.Base
 	parts := strings.Split(name, ":")
 	switch len(parts) {
 	case 2:
-		var schema Schemaer
-		schema, err = sr.GetSchema(ga.GetAlias(parts[0]))
+		schema, err := sr.GetSchema(ga.GetAlias(parts[0]))
 		if err != nil {
-			return
+			return err
 		}
 
 		err = schema.EncodeType(parts[1], enc, sr, params, keepUsingNamespace, keepUsingNamespace, path...)
+		if err != nil {
+			return err
+		}
+		return nil
 	default:
-		err = fmt.Errorf("invalid restriction format '%s'", name)
+		err := fmt.Errorf("invalid restriction format '%s'", name)
+		return err
 	}
-
-	return
 }

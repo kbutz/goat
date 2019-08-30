@@ -7,19 +7,20 @@ import (
 
 type SchemaMap map[string]Schema
 
-func (m SchemaMap) GetSchema(space string) (s Schemaer, err error) {
+func (m SchemaMap) GetSchema(space string) (Schemaer, error) {
 	switch space {
 	case "http://www.w3.org/2001/XMLSchema":
-		s = baseSchema{}
+		return baseSchema{}, nil
 	default:
-		if ss, ok := m[space]; !ok {
-			err = fmt.Errorf("schema namespace not found: '%s'", space)
-		} else {
-			s = &ss
-		}
-	}
+		ss, ok := m[space]
 
-	return
+		if !ok {
+			err := fmt.Errorf("schema namespace not found: '%s'", space)
+			return nil, err
+		}
+
+		return &ss, nil
+	}
 }
 
 func (m SchemaMap) GetElement(space, name string) *Element {
