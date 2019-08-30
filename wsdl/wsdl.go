@@ -332,7 +332,6 @@ func (d *Definitions) GetDefinitions(client *client.Client, url string) (err err
 
 // Gets the base wsdl import, binding and operation definitions, adds imports and schema definitions
 func (d *Definitions) GetService(client *client.Client, url string) (err error) {
-	log.Printf("Get Definitions 1: %s", url)
 	err = d.GetDefinitions(client, url)
 	if err != nil {
 		return
@@ -372,7 +371,7 @@ func (d *Definitions) AddImports(client *client.Client) (err error) {
 			Aliases:           make(map[string]string),
 			ImportDefinitions: make(map[string]Definitions),
 		}
-		log.Printf("Get Definitions 2: %s", imports[i].Location)
+
 		err = definitions.GetDefinitions(client, imports[i].Location)
 		if err != nil {
 			return

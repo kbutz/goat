@@ -120,3 +120,33 @@ func TestWebservice_AddServices_HappyPath_SingleImport(t *testing.T) {
 		t.Errorf("Expected complexType with exactly three sequence>choice elements for BlockDeviceMappingItemType")
 	}
 }
+
+func TestWebservice_AddServices_HappyPath_MultipleImports(t *testing.T) {
+	operations, err := ioutil.ReadFile("fixtures/chromedata_operations.wsdl")
+	if err != nil {
+		t.Errorf("Error reading wsdl file")
+	}
+
+	typeDefinitions, err := ioutil.ReadFile("fixtures/chromedata_types.wsdl")
+	if err != nil {
+		t.Errorf("Error reading wsdl file")
+	}
+
+	mockClientController := gomock.NewController(t)
+	defer mockClientController.Finish()
+
+	mockClient := client.NewMockHTTPClientDoer(mockClientController)
+
+	mockClient.EXPECT().Do(gomock.Any()).Return(&http.Response{StatusCode: http.StatusOK, Body: ioutil.NopCloser(bytes.NewBuffer(operations))}, nil).Times(1)
+	mockClient.EXPECT().Do(gomock.Any()).Return(&http.Response{StatusCode: http.StatusOK, Body: ioutil.NopCloser(bytes.NewBuffer(typeDefinitions))}, nil).Times(1)
+
+	testService := Webservice{
+		services: map[string]*wsdl.Definitions{},
+		client:   client.Client{Client: mockClient},
+	}
+
+	err = testService.AddServices("http://example.com/mockecchrome/ws?WSDL")
+	if err != nil {
+		t.Errorf("Expected err to be nil")
+	}
+}
