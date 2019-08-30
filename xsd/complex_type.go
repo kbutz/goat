@@ -1,8 +1,8 @@
 package xsd
 
 import (
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"strings"
 
 	"github.com/sezzle/sezzle-go-xml"
@@ -35,7 +35,6 @@ func (c *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliase
 	for _, e := range c.Sequence {
 		err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 		if err != nil {
-			err = errors.Wrap(err, "Error encoding Sequence.Element")
 			return err
 		}
 	}
@@ -61,7 +60,6 @@ func (c *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliase
 			if hasPrefix(params, MakePath(append(path, e.Name))) {
 				err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 				if err != nil {
-					err = errors.Wrap(err, "Error encoding Sequence.Choice")
 					return err
 				}
 			}
@@ -84,7 +82,6 @@ func (c *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliase
 			if hasPrefix(params, MakePath(append(path, e.Name))) {
 				err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 				if err != nil {
-					err = errors.Wrap(err, "Error encoding Sequence.Choice")
 					return err
 				}
 			}
@@ -98,13 +95,11 @@ func (c *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliase
 			var schema Schemaer
 			schema, err := sr.GetSchema(ga.GetAlias(parts[0]))
 			if err != nil {
-				err = errors.Wrap(err, "Error getting schema from "+parts[0])
 				return err
 			}
 
 			err = schema.EncodeType(parts[1], enc, sr, params, keepUsingNamespace, keepUsingNamespace, path...)
 			if err != nil {
-				err = errors.Wrap(err, "Error encoding type for "+parts[1])
 				return err
 			}
 		default:
@@ -115,7 +110,6 @@ func (c *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliase
 		for _, e := range c.Content.Extension.Sequence {
 			err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 			if err != nil {
-				err = errors.Wrap(err, "Error encoding from Content.Extension.Sequence")
 				return err
 			}
 		}
@@ -145,7 +139,6 @@ func (c *ComplexType) EncodeChoice(choiceElements []Element, enc *xml.Encoder, s
 			if hasPrefix(params, MakePath(append(path, e.Name))) {
 				err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 				if err != nil {
-					err = errors.Wrap(err, "Error encoding Choice")
 					return err
 				}
 			}

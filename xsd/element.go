@@ -2,7 +2,6 @@ package xsd
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"strings"
 
 	"github.com/sezzle/sezzle-go-xml"
@@ -46,7 +45,6 @@ func (e *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, p
 
 	err := enc.EncodeToken(start)
 	if err != nil {
-		err = errors.Wrap(err, "Error encoding start token")
 		return err
 	}
 
@@ -62,13 +60,11 @@ func (e *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, p
 			var schema Schemaer
 			schema, err = sr.GetSchema(ga.GetAlias(parts[0]))
 			if err != nil {
-				err = errors.Wrap(err, "Error getting schema for "+parts[0])
 				return err
 			}
 
 			err = schema.EncodeType(parts[1], enc, sr, params, keepUsingNamespace, keepUsingNamespace, append(path, e.Name)...)
 			if err != nil {
-				err = errors.Wrap(err, "Error encoding type for "+parts[1])
 				return err
 			}
 		default:
@@ -79,7 +75,6 @@ func (e *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, p
 		for _, element := range e.ComplexTypes.Sequence {
 			err = element.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, e.Name)...)
 			if err != nil {
-				err = errors.Wrap(err, "Error encoding ComplexTypes.Sequence.Elements")
 				return err
 			}
 		}
@@ -89,7 +84,6 @@ func (e *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, p
 			// a type once one is reached, which will either encode the simple type with no validation, or the
 			// complexType with the choice validations
 			err = element.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, e.Name)...)
-			err = errors.Wrap(err, "Error encoding ComplexTypes.Sequence.Choice")
 			if err != nil {
 				return err
 			}
@@ -100,7 +94,6 @@ func (e *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, p
 			// a type once one is reached, which will either encode the simple type with no validation, or the
 			// complexType with the choice validations
 			err = element.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, e.Name)...)
-			err = errors.Wrap(err, "Error encoding ComplexTypes.Sequence.Choice")
 			if err != nil {
 				return err
 			}
@@ -110,7 +103,6 @@ func (e *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, p
 	// If an error was thrown above while trying to add a choice element that is not required, we won't close the tag here
 	err = enc.EncodeToken(start.End())
 	if err != nil {
-		err = errors.Wrap(err, "Error encoding end token")
 		return err
 	}
 
