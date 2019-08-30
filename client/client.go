@@ -30,18 +30,19 @@ type HTTPClientDoer interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-func (c *Client) MakeRequest(requestMethod, requestURL string, requestBody io.Reader, decodedResponse interface{}) (err error) {
+func (c *Client) MakeRequest(requestMethod, requestURL string, requestBody io.Reader, decodedResponse interface{}) error {
 	val := reflect.ValueOf(decodedResponse)
 	if val.Kind() != reflect.Ptr {
 		return errors.New("non-pointer decodedResponse passed to MakeRequest")
 	}
 
 	var hs History
+	var err error
 	if c.UseHistory && requestBody != nil {
 		var buf []byte
 		buf, err = ioutil.ReadAll(requestBody)
 		if err != nil {
-			return
+			return err
 		}
 		hs.RequestBody = bytes.NewBuffer(buf)
 		requestBody = ioutil.NopCloser(bytes.NewBuffer(buf))
@@ -49,7 +50,7 @@ func (c *Client) MakeRequest(requestMethod, requestURL string, requestBody io.Re
 
 	req, err := http.NewRequest(requestMethod, requestURL, requestBody)
 	if err != nil {
-		return
+		return err
 	}
 
 	if c.Header != nil {
@@ -68,19 +69,21 @@ func (c *Client) MakeRequest(requestMethod, requestURL string, requestBody io.Re
 	//}
 	resp, err = c.Client.Do(req)
 	if err != nil {
-		return
+		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		var b []byte
 		b, err = ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return
+			return err
 		}
 
 		err = errors.New(string(b))
-		return
+		return err
 	}
 
 	var responseBody io.Reader
@@ -93,8 +96,8 @@ func (c *Client) MakeRequest(requestMethod, requestURL string, requestBody io.Re
 	}
 	err = xml.NewDecoder(responseBody).Decode(decodedResponse)
 	if err != nil {
-		return
+		return err
 	}
 
-	return
+	return nil
 }
