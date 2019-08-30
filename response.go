@@ -20,52 +20,43 @@ type ResponseEnvelope struct {
 }
 
 // NewRequest : Encodes and does some validations, writing an XML request to the supplied buffer
-func (w *Webservice) NewRequest(service, method string, params map[string]interface{}, buf io.Writer) (err error) {
+func (w *Webservice) NewRequest(service, method string, params map[string]interface{}, buf io.Writer) error {
 	s := w.services[service]
 	if s == nil {
-		err = fmt.Errorf("no such service '%s'", service)
-		return
+		err := fmt.Errorf("no such service '%s'", service)
+		return err
 	}
 
-	err = s.WriteRequest(method, buf, params)
-	return
+	err := s.WriteRequest(method, buf, params)
+	return err
 }
 
-func (w *Webservice) SendBuffer(service string, res interface{}, buf io.Reader) (err error) {
+func (w *Webservice) SendBuffer(service string, res interface{}, buf io.Reader) error {
 	s := w.services[service]
 	if s == nil {
-		err = fmt.Errorf("no such service '%s'", service)
-		return
+		err := fmt.Errorf("no such service '%s'", service)
+		return err
 	}
 
 	e := new(ResponseEnvelope)
-	err = w.client.MakeRequest("POST", s.Service.Port.Address.Location, buf, e)
+	err := w.client.MakeRequest("POST", s.Service.Port.Address.Location, buf, e)
 	if err != nil {
-		return
+		return err
 	}
+
 	err = xml.Unmarshal(e.Body.Data, res)
 	if err != nil {
-		return
+		return err
 	}
-	return
+	return nil
 }
 
-func (w *Webservice) Do(service, method string, res interface{}, params map[string]interface{}) (err error) {
+func (w *Webservice) Do(service, method string, res interface{}, params map[string]interface{}) error {
 	buf := new(bytes.Buffer)
-	err = w.NewRequest(service, method, params, buf)
+	err := w.NewRequest(service, method, params, buf)
 	if err != nil {
-		return
+		return err
 	}
-
-	//fmt.Println("THE ERROR: ", err)
-	//var byteSlice []byte
-	//byteSlice, err = ioutil.ReadAll(buf)
-	//fmt.Println("THE BUFFER: " + string(byteSlice))
-	//if err != nil {
-	//	return
-	//}
-	//
-	//return nil
 
 	// TODO: Webservice.SendBuffer with invalid SOAP request will return a generic SOAP faultCode
 	err = w.SendBuffer(service, res, buf)
