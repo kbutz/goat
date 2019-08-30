@@ -36,7 +36,6 @@ var mappings = []mapping{
 		kinds:     []reflect.Kind{reflect.String},
 		format:    "%s",
 	},
-	// TODO: need to support dateTime
 	{
 		xsdSchema: []string{"dateTime"},
 		kinds:     []reflect.Kind{reflect.String},
