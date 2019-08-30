@@ -30,11 +30,11 @@ type Definitions struct {
 	InnerDefinitions
 }
 
-func (d *Definitions) GetNamespace(alias string) (space string) {
+func (d *Definitions) GetNamespace(alias string) string {
 	return d.Aliases[alias]
 }
 
-func (d *Definitions) GetAlias(namespace string) (alias string) {
+func (d *Definitions) GetAlias(namespace string) string {
 	for key, val := range d.Aliases {
 		if val == namespace {
 			return key
@@ -43,10 +43,10 @@ func (d *Definitions) GetAlias(namespace string) (alias string) {
 	return ""
 }
 
-func (d *Definitions) UnmarshalXML(decoder *xml.Decoder, start xml.StartElement) (err error) {
-	err = decoder.DecodeElement(&d.InnerDefinitions, &start)
+func (d *Definitions) UnmarshalXML(decoder *xml.Decoder, start xml.StartElement) error {
+	err := decoder.DecodeElement(&d.InnerDefinitions, &start)
 	if err != nil {
-		return
+		return err
 	}
 
 	d.XMLName = start.Name
@@ -69,7 +69,7 @@ func (d *Definitions) UnmarshalXML(decoder *xml.Decoder, start xml.StartElement)
 		}
 	}
 
-	return
+	return nil
 }
 
 func copyMap(src map[string]interface{}) map[string]interface{} {
@@ -80,15 +80,16 @@ func copyMap(src map[string]interface{}) map[string]interface{} {
 	return dst
 }
 
-func (d *Definitions) WriteRequest(operation string, w io.Writer, bodyParams map[string]interface{}) (err error) {
+func (d *Definitions) WriteRequest(operation string, w io.Writer, bodyParams map[string]interface{}) error {
 	//headerParams = copyMap(headerParams)
 	bodyParams = copyMap(bodyParams)
 
 	var bndOp BindingOperation
 	var ptOp PortTypeOperation
+	var err error
 	bndOp, ptOp, err = d.getOperations(operation)
 	if err != nil {
-		return
+		return err
 	}
 	// fmt.Println("bndOp", bndOp)
 	// fmt.Println("ptOp", ptOp)
@@ -106,10 +107,13 @@ func (d *Definitions) WriteRequest(operation string, w io.Writer, bodyParams map
 
 	body, bodyElement, bodyService, err = d.getSchema(bndOp.Input.SoapBody.PortTypeOperationMessage, ptOp.Input)
 	if err != nil {
-		return
+		return err
 	}
 
-	fmt.Fprint(w, xml.Header)
+	_, err = fmt.Fprint(w, xml.Header)
+	if err != nil {
+		return err
+	}
 	enc := xml.NewEncoder(w)
 	//enc := xml.NewEncoder(io.MultiWriter(w, os.Stdout))
 	enc.Indent("", "  ")
@@ -144,8 +148,13 @@ func (d *Definitions) WriteRequest(operation string, w io.Writer, bodyParams map
 	op, _ := xml.MarshalIndent(envelope, "  ", "    ")
 	fmt.Println(string(op))*/
 
-	enc.EncodeToken(envelope)
-	defer enc.EncodeToken(envelope.End())
+	err = enc.EncodeToken(envelope)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = enc.EncodeToken(envelope.End())
+	}()
 
 	// soapHeader := xml.StartElement{
 	// 	Name: xml.Name{
@@ -167,15 +176,22 @@ func (d *Definitions) WriteRequest(operation string, w io.Writer, bodyParams map
 			Local:  "Body",
 		},
 	}
-	enc.EncodeToken(soapBody)
+	err = enc.EncodeToken(soapBody)
+	if err != nil {
+		return err
+	}
 
 	err = body.EncodeElement(bodyElement, enc, bodyService.Types.Schemas, bodyParams, true, false)
 	if err != nil {
-		return
+		return err
 	}
-	enc.EncodeToken(soapBody.End())
 
-	return
+	err = enc.EncodeToken(soapBody.End())
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (d *Definitions) getSchema(msg ...PortTypeOperationMessage) (schema xsd.Schema, element string, service *Definitions, err error) {
@@ -296,65 +312,35 @@ func (d *Definitions) getOperations(operation string) (bndOp BindingOperation, p
 }
 
 // Unmarhsals the WSDL definitions into the Definitions struct
-func (d *Definitions) GetDefinitions(client *client.Client, url string) (err error) {
-	err = client.MakeRequest("GET", url, nil, d)
-	/*
-		TODO: Not sure where this came from, but let's remove commented out code where possible
-		var resp *http.Response
-		var req *http.Request
-		req, err = http.NewRequest("GET", url, nil)
-		if err != nil {
-			return
-		}
-
-		for key, val := range headers {
-			req.Header.Set(key, val.(string))
-		}
-
-		// bts, _ := httputil.DumpRequest(req, true)
-		// fmt.Println(string(bts))
-
-		resp, err = http.DefaultClient.Do(req)
-		if err != nil {
-			return
-		}
-		defer resp.Body.Close()
-
-		// bts, _ = httputil.DumpResponse(resp, true)
-		// fmt.Println(string(bts))
-
-		err = xml.NewDecoder(resp.Body).Decode(d)
-		if err != nil {
-			return
-		}*/
-	return
+func (d *Definitions) GetDefinitions(client *client.Client, url string) error {
+	return client.MakeRequest("GET", url, nil, d)
 }
 
 // Gets the base wsdl import, binding and operation definitions, adds imports and schema definitions
-func (d *Definitions) GetService(client *client.Client, url string) (err error) {
-	err = d.GetDefinitions(client, url)
+func (d *Definitions) GetService(client *client.Client, url string) error {
+	err := d.GetDefinitions(client, url)
 	if err != nil {
-		return
+		return err
 	}
 
 	if d.Service.Name == "" {
 		err = fmt.Errorf("invalid service name '%s' for url '%s'", d.Service.Name, url)
-		return
+		return err
 	}
 	log.Printf("adding service '%s' from '%s'", d.Service.Name, url)
 
 	log.Printf("adding all imports")
 	err = d.AddImports(client)
 	if err != nil {
-		return
+		return err
 	}
 
-	return
+	return nil
 }
 
 // AddImports : Gets wsdl schema definitions and recursively adds any additional imports - for example, if the
 // WSDL itself has an import to fetch the type definitions separately from the bindings and operations
-func (d *Definitions) AddImports(client *client.Client) (err error) {
+func (d *Definitions) AddImports(client *client.Client) error {
 	imports := []Import{}
 	for _, val := range d.Imports {
 		imports = append(imports, val)
@@ -372,18 +358,18 @@ func (d *Definitions) AddImports(client *client.Client) (err error) {
 			ImportDefinitions: make(map[string]Definitions),
 		}
 
-		err = definitions.GetDefinitions(client, imports[i].Location)
+		err := definitions.GetDefinitions(client, imports[i].Location)
 		if err != nil {
-			return
+			return err
 		}
 
 		err = definitions.AddImports(client)
 		if err != nil {
-			return
+			return err
 		}
 
 		d.ImportDefinitions[d.GetAlias(imports[i].Namespace)] = *definitions
 	}
 
-	return
+	return nil
 }
