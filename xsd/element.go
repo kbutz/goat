@@ -22,14 +22,12 @@ var (
 	envName = "ns0"
 )
 
-func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) (err error) {
-	if self.MinOccurs != "" && self.MinOccurs == "0" && !hasPrefix(params, MakePath(append(path, self.Name))) {
-		return
+func (e *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
+	// If minOccurs="0" and the current schema element was not submitted on the parameters, we don't need it
+	// If a value for the current schema element was submitted, continue with encoding
+	if e.MinOccurs == "0" && !hasPrefix(params, MakePath(append(path, e.Name))) {
+		return nil
 	}
-
-	/*if hasPrefix(params, MakePath(append(path, self.Name))) {
-		// TODO: figure this out
-	}*/
 
 	var namespace, prefix string
 	if useNamespace {
@@ -41,59 +39,72 @@ func (self *Element) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliaser
 		Name: xml.Name{
 			Space:  namespace,
 			Prefix: prefix,
-			Local:  self.Name,
+			Local:  e.Name,
 		},
-		/*Name: xml.Name{
-			//Space: ga.Namespace(),
-			Local: self.Name,
-		},
-		/*Attr: []xml.Attr{
-			xml.Attr{
-				Name: xml.Name{
-					Space: "xmlns",
-					Local: "t",
-				},
-				Value: ga.Namespace(),
-			},
-		},*/
 	}
 
-	err = enc.EncodeToken(start)
+	err := enc.EncodeToken(start)
 	if err != nil {
-		return
+		return err
 	}
 
-	if self.Type != "" {
-		parts := strings.Split(self.Type, ":")
+	// If we've reached a an element with a Type, try to encode the type.
+	// EncodeType will get the cached schema definition from self.Definitions and attempt to encode the type
+	// based on the complexType or simpleType schema definition it has stored.
+	// If the current element itself is an empty ComplexType tag, recursively call Encode until all elements have been encoded
+	if e.Type != "" {
+		parts := strings.Split(e.Type, ":")
 		switch len(parts) {
 		case 2:
+			// Get the appropriate schema encoder for the type based on the submitted element name
 			var schema Schemaer
 			schema, err = sr.GetSchema(ga.GetAlias(parts[0]))
 			if err != nil {
-				return
+				return err
 			}
 
-			err = schema.EncodeType(parts[1], enc, sr, params, keepUsingNamespace, keepUsingNamespace, append(path, self.Name)...)
+			err = schema.EncodeType(parts[1], enc, sr, params, keepUsingNamespace, keepUsingNamespace, append(path, e.Name)...)
 			if err != nil {
-				return
+				return err
 			}
 		default:
-			err = fmt.Errorf("malformed type '%s' in path %q", self.Type, path)
-			return
+			err = fmt.Errorf("malformed type '%s' in path %q", e.Type, path)
+			return err
 		}
-	} else if self.ComplexTypes != nil {
-		for _, e := range self.ComplexTypes.Sequence {
-			err = e.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, self.Name)...)
+	} else if e.ComplexTypes != nil {
+		for _, element := range e.ComplexTypes.Sequence {
+			err = element.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, e.Name)...)
 			if err != nil {
-				return
+				return err
+			}
+		}
+
+		for _, element := range e.ComplexTypes.Choice {
+			// We don't actually need to do any choice validation here, I think. e.Encode will attempt to encode
+			// a type once one is reached, which will either encode the simple type with no validation, or the
+			// complexType with the choice validations
+			err = element.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, e.Name)...)
+			if err != nil {
+				return err
+			}
+		}
+
+		for _, element := range e.ComplexTypes.SequenceChoice {
+			// We don't actually need to do any choice validation here, I think. e.Encode will attempt to encode
+			// a type once one is reached, which will either encode the simple type with no validation, or the
+			// complexType with the choice validations
+			err = element.Encode(enc, sr, ga, params, keepUsingNamespace, keepUsingNamespace, append(path, e.Name)...)
+			if err != nil {
+				return err
 			}
 		}
 	}
 
+	// If an error was thrown above while trying to add a choice element that is not required, we won't close the tag here
 	err = enc.EncodeToken(start.End())
 	if err != nil {
-		return
+		return err
 	}
 
-	return
+	return nil
 }

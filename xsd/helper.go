@@ -20,15 +20,15 @@ type SchemaRepository interface {
 	GetSchema(space string) (Schemaer, error)
 }
 
-func hasPrefix(m map[string]interface{}, prefix string) (ok bool) {
+func hasPrefix(m map[string]interface{}, prefix string) bool {
 	for k := range m {
-		ok = strings.HasPrefix(k, prefix)
+		ok := strings.HasPrefix(k, prefix)
 		if ok {
-			return
+			return true
 		}
 	}
 
-	return
+	return false
 }
 
 func MakePath(path []string) string {

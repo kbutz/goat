@@ -1,9 +1,9 @@
 package goat
 
 import (
+	"github.com/sezzle/goat/client"
+	"github.com/sezzle/goat/wsdl"
 	"net/http"
-	"sezzle/goat/client"
-	"sezzle/goat/wsdl"
 )
 
 type Webservice struct {
@@ -24,60 +24,62 @@ func NewWebservice() Webservice {
 	return ws
 }
 
-func (self *Webservice) UseHeader(header *http.Header) {
+func (w *Webservice) UseHeader(header *http.Header) {
 	if header != nil {
-		self.client.Header = header
+		w.client.Header = header
 	}
 }
 
-func (self *Webservice) UseHistory() {
-	self.client.UseHistory = true
-	self.ClearHistory()
+func (w *Webservice) UseHistory() {
+	w.client.UseHistory = true
+	w.ClearHistory()
 }
 
-func (self *Webservice) UseClient(client *http.Client) {
+func (w *Webservice) UseClient(client client.HTTPClientDoer) {
 	if client != nil {
-		self.client.Client = client
+		w.client.Client = client
 	}
 }
 
-func (self *Webservice) ClearHistory() {
-	self.client.History = []client.History{}
+func (w *Webservice) ClearHistory() {
+	w.client.History = []client.History{}
 }
 
-func (self *Webservice) IgnoreHistory() {
-	self.client.UseHistory = false
-	self.ClearHistory()
+func (w *Webservice) IgnoreHistory() {
+	w.client.UseHistory = false
+	w.ClearHistory()
 }
 
-func (self *Webservice) GetLatestHistory() (history *client.History) {
-	if self.client.UseHistory == false {
+func (w *Webservice) GetLatestHistory() (history *client.History) {
+	if w.client.UseHistory == false {
 		return nil
 	}
 
-	return &self.client.History[len(self.client.History)-1]
+	return &w.client.History[len(w.client.History)-1]
 }
 
-func (self *Webservice) GetHistory() (history *[]client.History) {
-	if self.client.UseHistory == false {
+func (w *Webservice) GetHistory() (history *[]client.History) {
+	if w.client.UseHistory == false {
 		return nil
 	}
 
-	return &self.client.History
+	return &w.client.History
 }
 
-func (self *Webservice) AddServices(urls ...string) (err error) {
+// AddServices : Given a submitted url or urls, unmarshal the wsdl definitions and store the unmarshalled definitions in memory
+// as "service". This will also fetch any additional imports on the WSDL
+func (w *Webservice) AddServices(urls ...string) error {
 	for _, u := range urls {
 		service := &wsdl.Definitions{
 			Aliases:           make(map[string]string),
 			ImportDefinitions: make(map[string]wsdl.Definitions),
 		}
-		err = service.GetService(&self.client, u)
+		err := service.GetService(&w.client, u)
 		if err != nil {
-			return
+			return err
 		}
-		self.services[service.Service.Name] = service
+		w.services[service.Service.Name] = service
 	}
 
-	return
+	return nil
 }

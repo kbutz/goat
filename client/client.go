@@ -19,25 +19,30 @@ type History struct {
 }
 
 type Client struct {
-	Client *http.Client
+	Client HTTPClientDoer
 	Header *http.Header
 
 	UseHistory bool
 	History    []History
 }
 
-func (self *Client) MakeRequest(requestMethod, requestURL string, requestBody io.Reader, decodedResponse interface{}) (err error) {
+type HTTPClientDoer interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
+func (c *Client) MakeRequest(requestMethod, requestURL string, requestBody io.Reader, decodedResponse interface{}) error {
 	val := reflect.ValueOf(decodedResponse)
 	if val.Kind() != reflect.Ptr {
 		return errors.New("non-pointer decodedResponse passed to MakeRequest")
 	}
 
 	var hs History
-	if self.UseHistory && requestBody != nil {
+	var err error
+	if c.UseHistory && requestBody != nil {
 		var buf []byte
 		buf, err = ioutil.ReadAll(requestBody)
 		if err != nil {
-			return
+			return err
 		}
 		hs.RequestBody = bytes.NewBuffer(buf)
 		requestBody = ioutil.NopCloser(bytes.NewBuffer(buf))
@@ -45,52 +50,54 @@ func (self *Client) MakeRequest(requestMethod, requestURL string, requestBody io
 
 	req, err := http.NewRequest(requestMethod, requestURL, requestBody)
 	if err != nil {
-		return
+		return err
 	}
 
-	if self.Header != nil {
-		req.Header = *self.Header
+	if c.Header != nil {
+		req.Header = *c.Header
 	}
 	req.Header.Set("Content-Type", "application/soap+xml")
 
-	if self.UseHistory {
+	if c.UseHistory {
 		hs.Request = req
 	}
 
 	var resp *http.Response
-	client := http.DefaultClient
-	if self.Client != nil {
-		client = self.Client
-	}
-	resp, err = client.Do(req)
+	//client := http.DefaultClient
+	//if c.Client != nil {
+	//	client = c.Client
+	//}
+	resp, err = c.Client.Do(req)
 	if err != nil {
-		return
+		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		var b []byte
 		b, err = ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return
+			return err
 		}
 
 		err = errors.New(string(b))
-		return
+		return err
 	}
 
 	var responseBody io.Reader
 	responseBody = resp.Body
-	if self.UseHistory {
+	if c.UseHistory {
 		hs.Response = resp
 		hs.ResponseBody = &bytes.Buffer{}
 		responseBody = io.TeeReader(responseBody, io.Writer(hs.ResponseBody))
-		self.History = append(self.History, hs)
+		c.History = append(c.History, hs)
 	}
 	err = xml.NewDecoder(responseBody).Decode(decodedResponse)
 	if err != nil {
-		return
+		return err
 	}
 
-	return
+	return nil
 }
