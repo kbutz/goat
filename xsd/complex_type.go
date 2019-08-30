@@ -40,6 +40,7 @@ func (c *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliase
 		}
 	}
 
+	// TODO: After writing some tests, refactor this to use EncodeChoice
 	// First, verify that one and only one of the choices for this path has been submitted on the params
 	// If none, continue do not encode
 	// If more than one, return error
@@ -51,17 +52,13 @@ func (c *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliase
 		}
 	}
 
-	fmt.Println(fmt.Sprintf("submittedChoices: %+v for %s", submittedChoices, c.Name))
-
 	if submittedChoices > 1 {
 		return errors.New("A max of one choice element can be submitted")
 	}
 
 	if submittedChoices == 1 {
-		fmt.Println("There was a single choice block submitted on the params, attempt to encode the choice elements")
 		for _, e := range c.Choice {
 			if hasPrefix(params, MakePath(append(path, e.Name))) {
-				fmt.Println("Encoding CHOICE: " + fmt.Sprintf("%+v", e))
 				err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 				if err != nil {
 					err = errors.Wrap(err, "Error encoding Sequence.Choice")
@@ -78,17 +75,13 @@ func (c *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliase
 		}
 	}
 
-	fmt.Println(fmt.Sprintf("submittedSequenceChoices: %+v for %s", submittedSequenceChoices, c.Name))
-
 	if submittedSequenceChoices > 1 {
 		return errors.New("A max of one choice element can be submitted")
 	}
 
 	if submittedSequenceChoices == 1 {
-		fmt.Println("There was a single choice block submitted on the params, attempt to encode the choice elements")
 		for _, e := range c.SequenceChoice {
 			if hasPrefix(params, MakePath(append(path, e.Name))) {
-				fmt.Println("Encoding SEQUENCE>CHOICE: " + fmt.Sprintf("%+v", e))
 				err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
 				if err != nil {
 					err = errors.Wrap(err, "Error encoding Sequence.Choice")
@@ -98,7 +91,6 @@ func (c *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliase
 		}
 	}
 
-	fmt.Println("c.Content: " + fmt.Sprintf("%+v", c.Content))
 	if c.Content != nil {
 		parts := strings.Split(c.Content.Extension.Base, ":")
 		switch len(parts) {
@@ -125,6 +117,37 @@ func (c *ComplexType) Encode(enc *xml.Encoder, sr SchemaRepository, ga GetAliase
 			if err != nil {
 				err = errors.Wrap(err, "Error encoding from Content.Extension.Sequence")
 				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *ComplexType) EncodeChoice(choiceElements []Element, enc *xml.Encoder, sr SchemaRepository, ga GetAliaser, params map[string]interface{}, useNamespace, keepUsingNamespace bool, path ...string) error {
+	// First, verify that one and only one of the choices for this path has been submitted on the params
+	// If none, continue do not encode
+	// If more than one, return error
+	// If one, start encoding - if any of the child element types are also choices, they will need to meet the same criteria
+	submittedChoices := 0
+	for _, e := range choiceElements {
+		if hasPrefix(params, MakePath(append(path, e.Name))) {
+			submittedChoices++
+		}
+	}
+
+	if submittedChoices > 1 {
+		return errors.New("A max of one choice element can be submitted")
+	}
+
+	if submittedChoices == 1 {
+		for _, e := range choiceElements {
+			if hasPrefix(params, MakePath(append(path, e.Name))) {
+				err := e.Encode(enc, sr, ga, params, useNamespace, keepUsingNamespace, path...)
+				if err != nil {
+					err = errors.Wrap(err, "Error encoding Choice")
+					return err
+				}
 			}
 		}
 	}
